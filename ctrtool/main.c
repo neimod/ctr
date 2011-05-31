@@ -16,6 +16,7 @@ static void usage(const char *argv0)
 		   "                          This is the default action.\n"
            "  -d, --decrypt      Decrypt file.\n"
 		   "  -k, --key=file     Specify key file.\n"
+		   "  -n, --ncch=offs    Specify offset for NCCH header.\n"
 		   "  --exefs=file       Specify ExeFS filepath.\n"
 		   "  --romfs=file       Specify RomFS filepath.\n"
 		   "  --exheader=file    Specify Extended Header filepath.\n"
@@ -121,7 +122,7 @@ void decode_ncch_header(const ctr_ncchheader* header, unsigned int offset)
 
 	fprintf(stdout, "Header:                 %s\n", magic);
 	memdump(stdout, "Signature:              ", header->signature, 0x100);       
-	fprintf(stdout, "Content size:           0x%08x\n", getle32(header->contentsize));
+	fprintf(stdout, "Content size:           0x%08x\n", getle32(header->contentsize)*0x200);
 	fprintf(stdout, "Partition id:           %016llx\n", getle64(header->partitionid));
 	fprintf(stdout, "Maker code:             %04x\n", getle16(header->makercode));
 	fprintf(stdout, "Version:                %04x\n", getle16(header->version));
@@ -224,7 +225,7 @@ int main(int argc, char* argv[])
 	ctr_ncchheader ncchheader;
 	unsigned char magic[4];
 	unsigned int filetype;
-	unsigned int ncchoffset = 0;
+	unsigned int ncchoffset = ~0;
 	char infname[512];
 	char exheaderfname[512];
 	char romfsfname[512];
@@ -249,10 +250,11 @@ int main(int argc, char* argv[])
 			{"romfs", 1, NULL, 1},
 			{"exheader", 1, NULL, 2},
 			{"key", 1, NULL, 'k'},
+			{"ncch", 1, NULL, 'n'},
 			{NULL},
 		};
 
-		c = getopt_long(argc, argv, "dik:", long_options, &option_index);
+		c = getopt_long(argc, argv, "dik:n:", long_options, &option_index);
 		if (c == -1)
 			break;
 
@@ -264,6 +266,10 @@ int main(int argc, char* argv[])
 
 			case 'i':
 				actions |= Info;
+			break;
+
+			case 'n':
+				ncchoffset = strtoul(optarg, 0, 0);
 			break;
 
 			case 'k':
@@ -327,10 +333,13 @@ int main(int argc, char* argv[])
 		break;
 	}
 
-	if (filetype == FILETYPE_CCI)
-		ncchoffset = 0x4000;
-	else if (filetype == FILETYPE_CXI)
-		ncchoffset = 0;
+	if (ncchoffset == ~0)
+	{
+		if (filetype == FILETYPE_CCI)
+			ncchoffset = 0x4000;
+		else if (filetype == FILETYPE_CXI)
+			ncchoffset = 0;
+	}
 
 	fseek(f, ncchoffset, SEEK_SET);
 
