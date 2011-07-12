@@ -191,6 +191,18 @@
 				RelativePath=".\main.c"
 				>
 			</File>
+			<File
+				RelativePath=".\tik.c"
+				>
+			</File>
+			<File
+				RelativePath=".\tmd.c"
+				>
+			</File>
+			<File
+				RelativePath=".\utils.c"
+				>
+			</File>
 		</Filter>
 		<Filter
 			Name="Header Files"
@@ -202,11 +214,35 @@
 				>
 			</File>
 			<File
+				RelativePath=".\cia.h"
+				>
+			</File>
+			<File
 				RelativePath=".\ctr.h"
 				>
 			</File>
 			<File
 				RelativePath=".\windows\getopt.h"
+				>
+			</File>
+			<File
+				RelativePath=".\ncch.h"
+				>
+			</File>
+			<File
+				RelativePath=".\tik.h"
+				>
+			</File>
+			<File
+				RelativePath=".\tmd.h"
+				>
+			</File>
+			<File
+				RelativePath=".\types.h"
+				>
+			</File>
+			<File
+				RelativePath=".\utils.h"
 				>
 			</File>
 		</Filter>
