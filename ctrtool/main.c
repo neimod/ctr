@@ -21,16 +21,16 @@ enum cryptotype
 typedef struct
 {
 	int actions;
-	unsigned int filetype;
-	unsigned char key[16];
-	unsigned char iv[16];
+	u32 filetype;
+	u8 key[16];
+	u8 iv[16];
 	char exheaderfname[512];
 	char romfsfname[512];
 	char exefsfname[512];
 	int setexefsfname;
 	int setromfsfname;
 	int setexheaderfname;
-	unsigned int ncchoffset;
+	u32 ncchoffset;
 	ctr_crypto_context cryptoctx;
 	FILE* infile;
 	char certsfname[512];
@@ -76,14 +76,14 @@ static void usage(const char *argv0)
    exit(1);
 }
 
-static unsigned int align(unsigned int offset, unsigned int alignment)
+static u32 align(u32 offset, u32 alignment)
 {
-	unsigned int mask = ~(alignment-1);
+	u32 mask = ~(alignment-1);
 
 	return (offset + (alignment-1)) & mask;
 }
 
-unsigned long long getle64(const unsigned char* p)
+unsigned long long getle64(const u8* p)
 {
 	unsigned long long n = p[0];
 
@@ -97,20 +97,20 @@ unsigned long long getle64(const unsigned char* p)
 	return n;
 }
 
-unsigned int getle32(const unsigned char* p)
+u32 getle32(const u8* p)
 {
 	return (p[0]<<0) | (p[1]<<8) | (p[2]<<16) | (p[3]<<24);
 }
 
-unsigned int getle16(const unsigned char* p)
+u32 getle16(const u8* p)
 {
 	return (p[0]<<0) | (p[1]<<8);
 }
 
-void readkeyfile(unsigned char* key, const char* keyfname)
+void readkeyfile(u8* key, const char* keyfname)
 {
 	FILE* f = fopen(keyfname, "rb");
-	unsigned int keysize = 0;
+	u32 keysize = 0;
 
 	if (0 == f)
 	{
@@ -140,15 +140,15 @@ clean:
 }
 
 
-void memdump(FILE* fout, const char* prefix, const unsigned char* data, unsigned int size)
+void memdump(FILE* fout, const char* prefix, const u8* data, u32 size)
 {
-	unsigned int i;
-	unsigned int prefixlen = strlen(prefix);
-	unsigned int offs = 0;
-	unsigned int line = 0;
+	u32 i;
+	u32 prefixlen = strlen(prefix);
+	u32 offs = 0;
+	u32 line = 0;
 	while(size)
 	{
-		unsigned int max = 16;
+		u32 max = 16;
 
 		if (max > size)
 			max = size;
@@ -168,7 +168,7 @@ void memdump(FILE* fout, const char* prefix, const unsigned char* data, unsigned
 	}
 }
 
-void decode_ncch_header(const ctr_ncchheader* header, unsigned int offset)
+void decode_ncch_header(const ctr_ncchheader* header, u32 offset)
 {
 	char magic[5];
 	char productcode[0x11];
@@ -215,14 +215,14 @@ void decode_cia_header(const ctr_ciaheader* header)
 	fprintf(stdout, "Contentsize             0x%016llx\n", getle64(header->contentsize));
 }
 
-void decrypt_ncch(toolcontext* ctx, unsigned int ncchoffset, const ctr_ncchheader* header, unsigned int type)
+void decrypt_ncch(toolcontext* ctx, u32 ncchoffset, const ctr_ncchheader* header, u32 type)
 {
-	unsigned int size = 0;
-	unsigned int offset = 0;
+	u32 size = 0;
+	u32 offset = 0;
 	FILE* fout = 0;
-	unsigned char buffer[16 * 1024];
-	unsigned char counter[16];
-	unsigned int i;
+	u8 buffer[16 * 1024];
+	u8 counter[16];
+	u32 i;
 	char* outfname = 0;
 
 
@@ -268,7 +268,7 @@ void decrypt_ncch(toolcontext* ctx, unsigned int ncchoffset, const ctr_ncchheade
 
 	while(size)
 	{
-		unsigned int max = sizeof(buffer);
+		u32 max = sizeof(buffer);
 		if (max > size)
 			max = size;
 
@@ -294,7 +294,7 @@ clean:
 		fclose(fout);
 }
 
-void process_ncch(toolcontext* ctx, unsigned int ncchoffset)
+void process_ncch(toolcontext* ctx, u32 ncchoffset)
 {
 	ctr_ncchheader ncchheader;
 
@@ -333,9 +333,9 @@ void process_ncch(toolcontext* ctx, unsigned int ncchoffset)
 	}
 }
 
-void save_blob(toolcontext* ctx, unsigned int offset, unsigned int size, const char* outfname, unsigned int type)
+void save_blob(toolcontext* ctx, u32 offset, u32 size, const char* outfname, u32 type)
 {
-	unsigned char buffer[16*1024];
+	u8 buffer[16*1024];
 	FILE* fout = 0;
 
 	fseek(ctx->infile, offset, SEEK_SET);
@@ -355,7 +355,7 @@ void save_blob(toolcontext* ctx, unsigned int offset, unsigned int size, const c
 
 	while(size)
 	{
-		unsigned int max = sizeof(buffer);
+		u32 max = sizeof(buffer);
 		if (max > size)
 			max = size;
 
@@ -386,14 +386,14 @@ clean:
 void process_cia(toolcontext* ctx)
 {
 	ctr_ciaheader ciaheader;
-	unsigned int cryptotype;
-	unsigned char titleid[16];
-	unsigned char titlekey[16];
-	unsigned int offsetcerts = 0;
-	unsigned int offsettik = 0;
-	unsigned int offsettmd = 0;
-	unsigned int offsetmeta = 0;
-	unsigned int offsetcontent = 0;
+	u32 cryptotype;
+	u8 titleid[16];
+	u8 titlekey[16];
+	u32 offsetcerts = 0;
+	u32 offsettik = 0;
+	u32 offsettmd = 0;
+	u32 offsetmeta = 0;
+	u32 offsetcontent = 0;
 
 	fseek(ctx->infile, 0, SEEK_SET);
 
@@ -465,7 +465,7 @@ void process_cia(toolcontext* ctx)
 				fprintf(stdout, "Decrypting content to %s...\n", ctx->contentsfname);
 			}			
 
-			save_blob(ctx, offsetcontent, (unsigned int)getle64(ciaheader.contentsize), ctx->contentsfname, cryptotype);
+			save_blob(ctx, offsetcontent, (u32)getle64(ciaheader.contentsize), ctx->contentsfname, cryptotype);
 		}
 
 		if (ctx->setbannerfname)
@@ -481,14 +481,12 @@ clean:
 
 int main(int argc, char* argv[])
 {
-	FILE* infile = 0;
-	
 	toolcontext ctx;
-	unsigned char magic[4];
+	u8 magic[4];
 	char infname[512];
 	int c;
-	unsigned int ncchoffset = ~0;
-	unsigned char key[16] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+	u32 ncchoffset = ~0;
+	u8 key[16] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 	
 	memset(&ctx, 0, sizeof(toolcontext));
 	ctx.actions = Info | Extract;

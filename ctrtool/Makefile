@@ -1,6 +1,6 @@
 OBJS = main.o aes.o ctr.o
 LIBS = 
-CFLAGS =
+CFLAGS = -Wall
 OUTPUT = ctrtool
 
 main: $(OBJS)

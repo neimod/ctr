@@ -2,6 +2,7 @@
 #define _CTR_H_
 
 #include "aes.h"
+#include "types.h"
 
 
 #define MAGIC_NCCH 0x4843434E
@@ -24,55 +25,55 @@ typedef enum
 
 typedef struct
 {
-	unsigned char signature[0x100];
-	unsigned char magic[4];
-	unsigned char contentsize[4];
-	unsigned char partitionid[8];
-	unsigned char makercode[2];
-	unsigned char version[2];
-	unsigned char reserved0[4];
-	unsigned char programid[8];
-	unsigned char tempflag;
-	unsigned char reserved1[0x2f];
-    unsigned char productcode[0x10];
-    unsigned char extendedheaderhash[0x20];
-	unsigned char extendedheadersize[4];
-    unsigned char reserved2[4];
-    unsigned char flags[8];
-    unsigned char plainregionoffset[4];
-    unsigned char plainregionsize[4];
-    unsigned char reserved3[8];
-    unsigned char exefsoffset[4];
-    unsigned char exefssize[4];
-    unsigned char exefshashregionsize[4];
-    unsigned char reserved4[4];
-    unsigned char romfsoffset[4];
-    unsigned char romfssize[4];
-    unsigned char romfshashregionsize[4];
-    unsigned char reserved5[4];
-    unsigned char exefssuperblockhash[0x20];
-    unsigned char romfssuperblockhash[0x20];
+	u8 signature[0x100];
+	u8 magic[4];
+	u8 contentsize[4];
+	u8 partitionid[8];
+	u8 makercode[2];
+	u8 version[2];
+	u8 reserved0[4];
+	u8 programid[8];
+	u8 tempflag;
+	u8 reserved1[0x2f];
+	u8 productcode[0x10];
+	u8 extendedheaderhash[0x20];
+	u8 extendedheadersize[4];
+	u8 reserved2[4];
+	u8 flags[8];
+	u8 plainregionoffset[4];
+	u8 plainregionsize[4];
+	u8 reserved3[8];
+	u8 exefsoffset[4];
+	u8 exefssize[4];
+	u8 exefshashregionsize[4];
+	u8 reserved4[4];
+	u8 romfsoffset[4];
+	u8 romfssize[4];
+	u8 romfshashregionsize[4];
+	u8 reserved5[4];
+	u8 exefssuperblockhash[0x20];
+	u8 romfssuperblockhash[0x20];
 } ctr_ncchheader;
 
 
 typedef struct
 {
-	unsigned char headersize[4];
-	unsigned char type[2];
-	unsigned char version[2];
-	unsigned char certsize[4];
-	unsigned char ticketsize[4];
-	unsigned char tmdsize[4];
-	unsigned char metasize[4];
-	unsigned char contentsize[8];
-	unsigned char contentindex[0x2000];
+	u8 headersize[4];
+	u8 type[2];
+	u8 version[2];
+	u8 certsize[4];
+	u8 ticketsize[4];
+	u8 tmdsize[4];
+	u8 metasize[4];
+	u8 contentsize[8];
+	u8 contentindex[0x2000];
 } ctr_ciaheader;
 
 typedef struct
 {
-	unsigned char ctr[16];
-	unsigned char iv[16];
-    aes_context aes;
+	u8 ctr[16];
+	u8 iv[16];
+	aes_context aes;
 }
 ctr_crypto_context;
 
@@ -82,47 +83,47 @@ extern "C" {
 #endif
 
 void		ctr_set_iv( ctr_crypto_context* ctx, 
-						 unsigned char iv[16] );
+						 u8 iv[16] );
 
 void		ctr_add_counter( ctr_crypto_context* ctx,
-						 unsigned char carry );
+						 u8 carry );
 
 void		ctr_set_counter( ctr_crypto_context* ctx, 
-						 unsigned char ctr[16] );
+						 u8 ctr[16] );
 
 
 void		ctr_init_counter( ctr_crypto_context* ctx, 
-						  unsigned char key[16], 
-						  unsigned char ctr[12] );
+						  u8 key[16], 
+						  u8 ctr[12] );
 
 void		ctr_crypt_counter_block( ctr_crypto_context* ctx, 
-								     unsigned char input[16], 
-								     unsigned char output[16] );
+								     u8 input[16], 
+								     u8 output[16] );
 
 
 void		ctr_crypt_counter( ctr_crypto_context* ctx, 
-							   unsigned char* input, 
-							   unsigned char* output,
-							   unsigned int size );
+							   u8* input, 
+							   u8* output,
+							   u32 size );
 
 
 void		ctr_init_cbc_encrypt( ctr_crypto_context* ctx,
-							   unsigned char key[16],
-							   unsigned char iv[16] );
+							   u8 key[16],
+							   u8 iv[16] );
 
 void		ctr_init_cbc_decrypt( ctr_crypto_context* ctx,
-							   unsigned char key[16],
-							   unsigned char iv[16] );
+							   u8 key[16],
+							   u8 iv[16] );
 
 void		ctr_encrypt_cbc( ctr_crypto_context* ctx, 
-							  unsigned char* input,
-							  unsigned char* output,
-							  unsigned int size );
+							  u8* input,
+							  u8* output,
+							  u32 size );
 
 void		ctr_decrypt_cbc( ctr_crypto_context* ctx, 
-							  unsigned char* input,
-							  unsigned char* output,
-							  unsigned int size );
+							  u8* input,
+							  u8* output,
+							  u32 size );
 
 
 #ifdef __cplusplus
