@@ -78,6 +78,38 @@ clean:
 		fclose(f);
 }
 
+void hexdump(void *ptr, int buflen)
+{
+	u8 *buf = (u8*)ptr;
+	int i, j;
+
+	for (i=0; i<buflen; i+=16)
+	{
+		printf("%06x: ", i);
+		for (j=0; j<16; j++)
+		{ 
+			if (i+j < buflen)
+			{
+				printf("%02x ", buf[i+j]);
+			}
+			else
+			{
+				printf("   ");
+			}
+		}
+
+		printf(" ");
+
+		for (j=0; j<16; j++) 
+		{
+			if (i+j < buflen)
+			{
+				printf("%c", (buf[i+j] >= 0x20 && buf[i+j] <= 0x7e) ? buf[i+j] : '.');
+			}
+		}
+		printf("\n");
+	}
+}
 
 void memdump(FILE* fout, const char* prefix, const u8* data, u32 size)
 {
