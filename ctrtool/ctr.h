@@ -9,8 +9,10 @@
 
 typedef enum
 {
+	FILETYPE_UNKNOWN = 0,
 	FILETYPE_CCI,
 	FILETYPE_CXI,
+	FILETYPE_CIA,
 } ctr_filetypes;
 
 typedef enum
@@ -55,7 +57,21 @@ typedef struct
 
 typedef struct
 {
+	unsigned char headersize[4];
+	unsigned char type[2];
+	unsigned char version[2];
+	unsigned char certsize[4];
+	unsigned char ticketsize[4];
+	unsigned char tmdsize[4];
+	unsigned char metasize[4];
+	unsigned char contentsize[8];
+	unsigned char contentindex[0x2000];
+} ctr_ciaheader;
+
+typedef struct
+{
 	unsigned char ctr[16];
+	unsigned char iv[16];
     aes_context aes;
 }
 ctr_crypto_context;
@@ -65,8 +81,8 @@ ctr_crypto_context;
 extern "C" {
 #endif
 
-void		ctr_set_key( ctr_crypto_context* ctx, 
-						 unsigned char key[16] );
+void		ctr_set_iv( ctr_crypto_context* ctx, 
+						 unsigned char iv[16] );
 
 void		ctr_add_counter( ctr_crypto_context* ctx,
 						 unsigned char carry );
@@ -88,6 +104,26 @@ void		ctr_crypt_counter( ctr_crypto_context* ctx,
 							   unsigned char* input, 
 							   unsigned char* output,
 							   unsigned int size );
+
+
+void		ctr_init_cbc_encrypt( ctr_crypto_context* ctx,
+							   unsigned char key[16],
+							   unsigned char iv[16] );
+
+void		ctr_init_cbc_decrypt( ctr_crypto_context* ctx,
+							   unsigned char key[16],
+							   unsigned char iv[16] );
+
+void		ctr_encrypt_cbc( ctr_crypto_context* ctx, 
+							  unsigned char* input,
+							  unsigned char* output,
+							  unsigned int size );
+
+void		ctr_decrypt_cbc( ctr_crypto_context* ctx, 
+							  unsigned char* input,
+							  unsigned char* output,
+							  unsigned int size );
+
 
 #ifdef __cplusplus
 }

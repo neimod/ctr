@@ -4,6 +4,48 @@
 #include <getopt.h>
 #include "ctr.h"
 
+enum actionflags
+{
+	Decrypt = (1<<0),
+	Info = (1<<1),
+	NoDecrypt = (1<<2),
+};
+
+enum cryptotype
+{
+	Plain,
+	CTR,
+	CBC
+};
+
+typedef struct
+{
+	int actions;
+	unsigned int filetype;
+	unsigned char key[16];
+	unsigned char iv[16];
+	char exheaderfname[512];
+	char romfsfname[512];
+	char exefsfname[512];
+	int setexefsfname;
+	int setromfsfname;
+	int setexheaderfname;
+	unsigned int ncchoffset;
+	ctr_crypto_context cryptoctx;
+	FILE* infile;
+	char certsfname[512];
+	char tikfname[512];
+	char tmdfname[512];
+	char contentsfname[512];
+	char bannerfname[512];
+	int setcertsfname;
+	int settikfname;
+	int settmdfname;
+	int setcontentsfname;
+	int setbannerfname;
+	
+
+} toolcontext;
 
 static void usage(const char *argv0)
 {
@@ -15,14 +57,29 @@ static void usage(const char *argv0)
            "  -i, --info         Show file info.\n"
 		   "                          This is the default action.\n"
            "  -d, --decrypt      Decrypt file.\n"
+		   "  -p, --plain        Extract data without decrypting.\n"
 		   "  -k, --key=file     Specify key file.\n"
+		   "CXI/CCI options:\n"
 		   "  -n, --ncch=offs    Specify offset for NCCH header.\n"
 		   "  --exefs=file       Specify ExeFS filepath.\n"
 		   "  --romfs=file       Specify RomFS filepath.\n"
 		   "  --exheader=file    Specify Extended Header filepath.\n"
+		   "CIA options:\n"
+		   "  --certs=file       Specify Certificate chain filepath.\n"
+		   "  --tik=file         Specify Ticket filepath.\n"
+		   "  --tmd=file         Specify TMD filepath.\n"
+		   "  --contents=file    Specify Contents filepath.\n"
+		   "  --banner=file      Specify Banner filepath.\n"
            "\n",
 		   argv0);
    exit(1);
+}
+
+static unsigned int align(unsigned int offset, unsigned int alignment)
+{
+	unsigned int mask = ~(alignment-1);
+
+	return (offset + (alignment-1)) & mask;
 }
 
 unsigned long long getle64(const unsigned char* p)
@@ -144,7 +201,20 @@ void decode_ncch_header(const ctr_ncchheader* header, unsigned int offset)
 	memdump(stdout, "RomFS Superblock Hash:  ", header->romfssuperblockhash, 0x20);
 }
 
-void decrypt_ncch(FILE* f, ctr_crypto_context* ctx, unsigned int ncchoffset, const ctr_ncchheader* header, const char* outfname, unsigned int type)
+
+void decode_cia_header(const ctr_ciaheader* header)
+{
+	fprintf(stdout, "Header size             0x%08x\n", getle32(header->headersize));
+	fprintf(stdout, "Type                    %04x\n", getle16(header->type));
+	fprintf(stdout, "Version                 %04x\n", getle16(header->version));
+	fprintf(stdout, "Certificate chain size  0x%04x\n", getle32(header->certsize));
+	fprintf(stdout, "Ticket size             0x%04x\n", getle32(header->ticketsize));
+	fprintf(stdout, "TMD size                0x%04x\n", getle32(header->tmdsize));
+	fprintf(stdout, "Metasize                0x%04x\n", getle32(header->metasize));
+	fprintf(stdout, "Contentsize             0x%016llx\n", getle64(header->contentsize));
+}
+
+void decrypt_ncch(toolcontext* ctx, unsigned int ncchoffset, const ctr_ncchheader* header, unsigned int type)
 {
 	unsigned int size = 0;
 	unsigned int offset = 0;
@@ -152,21 +222,31 @@ void decrypt_ncch(FILE* f, ctr_crypto_context* ctx, unsigned int ncchoffset, con
 	unsigned char buffer[16 * 1024];
 	unsigned char counter[16];
 	unsigned int i;
+	char* outfname = 0;
+
 
 	if (type == NCCHTYPE_EXEFS)
 	{
 		offset = ncchoffset + getle32(header->exefsoffset) * 0x200;
 		size = getle32(header->exefssize) * 0x200;
+		outfname = ctx->exefsfname;
 	}
 	else if (type == NCCHTYPE_ROMFS)
 	{
 		offset = ncchoffset + getle32(header->romfsoffset) * 0x200;
 		size = getle32(header->romfssize) * 0x200;
+		outfname = ctx->romfsfname;
 	}
 	else if (type == NCCHTYPE_EXTHEADER)
 	{
 		offset = ncchoffset + 0x200;
 		size = getle32(header->extendedheadersize);
+		outfname = ctx->exheaderfname;
+	}
+	else
+	{
+		fprintf(stderr, "Error invalid NCCH type\n");
+		goto clean;
 	}
 
 	fout = fopen(outfname, "wb");
@@ -176,14 +256,14 @@ void decrypt_ncch(FILE* f, ctr_crypto_context* ctx, unsigned int ncchoffset, con
 		goto clean;
 	}
 
-	fseek(f, offset, SEEK_SET);
+	fseek(ctx->infile, offset, SEEK_SET);
 
 	memset(counter, 0, 16);
 	for(i=0; i<8; i++)
 		counter[i] = header->partitionid[7-i];
 	counter[8] = type;
 
-	ctr_set_counter(ctx, counter);
+	ctr_init_counter(&ctx->cryptoctx, ctx->key, counter);
 
 	while(size)
 	{
@@ -191,13 +271,13 @@ void decrypt_ncch(FILE* f, ctr_crypto_context* ctx, unsigned int ncchoffset, con
 		if (max > size)
 			max = size;
 
-		if (max != fread(buffer, 1, max, f))
+		if (max != fread(buffer, 1, max, ctx->infile))
 		{
 			fprintf(stdout, "Error reading file\n");
 			goto clean;
 		}
 
-		ctr_crypt_counter(ctx, buffer, buffer, max);
+		ctr_crypt_counter(&ctx->cryptoctx, buffer, buffer, max);
 
 		if (max != fwrite(buffer, 1, max, fout))
 		{
@@ -212,32 +292,203 @@ clean:
 		fclose(fout);
 }
 
+void process_ncch(toolcontext* ctx, unsigned int ncchoffset)
+{
+	ctr_ncchheader ncchheader;
+
+
+	if (ncchoffset == ~0)
+	{
+		if (ctx->filetype == FILETYPE_CCI)
+			ncchoffset = 0x4000;
+		else if (ctx->filetype == FILETYPE_CXI)
+			ncchoffset = 0;
+	}
+
+	fseek(ctx->infile, ncchoffset, SEEK_SET);
+
+	fread(&ncchheader, 1, 0x200, ctx->infile);
+
+	if (ctx->actions & Info)
+		decode_ncch_header(&ncchheader, ncchoffset);
+	if (ctx->actions & Decrypt)
+	{
+		if (ctx->setexefsfname)
+		{
+			fprintf(stdout, "Decrypting ExeFS...\n");
+			decrypt_ncch(ctx, ncchoffset, &ncchheader, NCCHTYPE_EXEFS);
+		}
+		if (ctx->setromfsfname)
+		{
+			fprintf(stdout, "Decrypting RomFS...\n");
+			decrypt_ncch(ctx, ncchoffset, &ncchheader, NCCHTYPE_ROMFS);
+		}
+		if (ctx->setexheaderfname)
+		{
+			fprintf(stdout, "Decrypting Extended Header...\n");
+			decrypt_ncch(ctx, ncchoffset, &ncchheader, NCCHTYPE_EXTHEADER);
+		}
+	}
+}
+
+void save_blob(toolcontext* ctx, unsigned int offset, unsigned int size, const char* outfname, unsigned int type)
+{
+	unsigned char buffer[16*1024];
+	FILE* fout = 0;
+
+	fseek(ctx->infile, offset, SEEK_SET);
+
+	fout = fopen(outfname, "wb");
+	if (0 == fout)
+	{
+		fprintf(stdout, "Error opening out file %s\n", outfname);
+		goto clean;
+	}
+
+	if (type == CBC)
+	{
+		ctr_init_cbc_decrypt(&ctx->cryptoctx, ctx->key, ctx->iv);
+	}
+
+
+	while(size)
+	{
+		unsigned int max = sizeof(buffer);
+		if (max > size)
+			max = size;
+
+		if (max != fread(buffer, 1, max, ctx->infile))
+		{
+			fprintf(stdout, "Error reading file\n");
+			goto clean;
+		}
+
+		if (type == CBC)
+		{
+			ctr_decrypt_cbc(&ctx->cryptoctx, buffer, buffer, max);
+		}
+
+		if (max != fwrite(buffer, 1, max, fout))
+		{
+			fprintf(stdout, "Error writing file\n");
+			goto clean;
+		}
+
+		size -= max;
+	}
+clean:
+	if (fout)
+		fclose(fout);
+}
+
+void process_cia(toolcontext* ctx)
+{
+	ctr_ciaheader ciaheader;
+	unsigned int cryptotype;
+	unsigned char titleid[16];
+	unsigned char titlekey[16];
+	unsigned int offsetcerts = 0;
+	unsigned int offsettik = 0;
+	unsigned int offsettmd = 0;
+	unsigned int offsetmeta = 0;
+	unsigned int offsetcontent = 0;
+
+	fseek(ctx->infile, 0, SEEK_SET);
+
+	if (fread(&ciaheader, 1, sizeof(ciaheader), ctx->infile) != sizeof(ciaheader))
+	{
+		fprintf(stderr, "Error reading CIA header\n");
+		goto clean;
+	}
+
+	if (ctx->actions & Info)
+		decode_cia_header(&ciaheader);
+
+	offsetcerts = align(getle32(ciaheader.headersize), 64);
+	offsettik = align(offsetcerts + getle32(ciaheader.certsize), 64);
+	offsettmd = align(offsettik + getle32(ciaheader.ticketsize), 64);
+	offsetcontent = align(offsettmd + getle32(ciaheader.tmdsize), 64);
+	offsetmeta = align(offsetcontent + getle32(ciaheader.contentsize), 64);
+	fseek(ctx->infile, offsettik + 0x1BF, SEEK_SET);
+	fread(titlekey, 1, 16, ctx->infile);
+	fseek(ctx->infile, offsettik + 0x1DC, SEEK_SET);
+	fread(titleid, 1, 16, ctx->infile);
+
+	if (ctx->actions & Info)
+	{
+		fprintf(stdout, "Certificates offset:    0x%08x\n", offsetcerts);
+		fprintf(stdout, "Ticket offset:          0x%08x\n", offsettik);
+		fprintf(stdout, "TMD offset:             0x%08x\n", offsettmd);
+		fprintf(stdout, "Content offset:         0x%08x\n", offsetcontent);
+		fprintf(stdout, "Banner offset:          0x%08x\n", offsetmeta);
+		memdump(stdout, "Title ID:               ", titleid, 0x10);
+		memdump(stdout, "Encrypted title key:    ", titlekey, 0x10);
+	}
+
+
+	if (ctx->setcertsfname)
+	{
+		fprintf(stdout, "Saving certificate chain to %s...\n", ctx->certsfname);
+		save_blob(ctx, offsetcerts, getle32(ciaheader.certsize), ctx->certsfname, Plain);
+	}
+
+	if (ctx->settikfname)
+	{
+		fprintf(stdout, "Saving ticket to %s...\n", ctx->tikfname);
+		save_blob(ctx, offsettik, getle32(ciaheader.ticketsize), ctx->tikfname, Plain);
+	}
+
+	if (ctx->settmdfname)
+	{
+		fprintf(stdout, "Saving TMD to %s...\n", ctx->tmdfname);
+		save_blob(ctx, offsettmd, getle32(ciaheader.tmdsize), ctx->tmdfname, Plain);
+	}
+
+	if (ctx->setcontentsfname)
+	{
+		
+
+		// Larger than 4GB content? Seems unlikely..
+		if (ctx->actions & NoDecrypt)
+		{
+			fprintf(stdout, "Saving content to %s...\n", ctx->contentsfname);
+			cryptotype = Plain;
+		}
+		else
+		{
+			cryptotype = CBC;
+			memcpy(ctx->iv, titleid, 16);
+			fprintf(stdout, "Decrypting content to %s...\n", ctx->contentsfname);
+		}			
+
+		save_blob(ctx, offsetcontent, (unsigned int)getle64(ciaheader.contentsize), ctx->contentsfname, cryptotype);
+	}
+
+	if (ctx->setbannerfname)
+	{
+		fprintf(stdout, "Saving banner to %s...\n", ctx->bannerfname);
+		save_blob(ctx, offsetmeta, getle32(ciaheader.metasize), ctx->bannerfname, Plain);
+	}
+
+clean:
+	return;
+}
 
 int main(int argc, char* argv[])
 {
-	enum actionflags
-	{
-		Decrypt = (1<<0),
-		Info = (1<<1),
-	};
-
-	FILE* f = 0;
-	ctr_ncchheader ncchheader;
+	FILE* infile = 0;
+	
+	toolcontext ctx;
 	unsigned char magic[4];
-	unsigned int filetype;
-	unsigned int ncchoffset = ~0;
 	char infname[512];
-	char exheaderfname[512];
-	char romfsfname[512];
-	char exefsfname[512];
-	int setexefsfname = 0;
-	int setromfsfname = 0;
-	int setexheaderfname = 0;
-	int actions = Info;
 	int c;
-	ctr_crypto_context cryptoctx;
+	unsigned int ncchoffset = ~0;
 	unsigned char key[16] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 	
+	memset(&ctx, 0, sizeof(toolcontext));
+	ctx.actions = Info;
+	ctx.filetype = FILETYPE_UNKNOWN;
+
 
 	while (1) 
 	{
@@ -245,10 +496,16 @@ int main(int argc, char* argv[])
 		static struct option long_options[] = 
 		{
 			{"decrypt", 0, NULL, 'd'},
+			{"plain", 0, NULL, 'p'},
 			{"info", 0, NULL, 'i'},
 			{"exefs", 1, NULL, 0},
 			{"romfs", 1, NULL, 1},
 			{"exheader", 1, NULL, 2},
+			{"certs", 1, NULL, 3},
+			{"tik", 1, NULL, 4},
+			{"tmd", 1, NULL, 5},
+			{"contents", 1, NULL, 6},
+			{"banner", 1, NULL, 7},
 			{"key", 1, NULL, 'k'},
 			{"ncch", 1, NULL, 'n'},
 			{NULL},
@@ -261,11 +518,15 @@ int main(int argc, char* argv[])
 		switch (c) 
 		{
 			case 'd':
-				actions |= Decrypt;
+				ctx.actions |= Decrypt;
+			break;
+
+			case 'p':
+				ctx.actions |= NoDecrypt;
 			break;
 
 			case 'i':
-				actions |= Info;
+				ctx.actions |= Info;
 			break;
 
 			case 'n':
@@ -277,18 +538,43 @@ int main(int argc, char* argv[])
 			break;
 
 			case 0:
-				strncpy(exefsfname, optarg, sizeof(exefsfname));
-				setexefsfname = 1;
+				strncpy(ctx.exefsfname, optarg, sizeof(ctx.exefsfname));
+				ctx.setexefsfname = 1;
 			break;
 
 			case 1:
-				strncpy(romfsfname, optarg, sizeof(romfsfname));
-				setromfsfname = 1;
+				strncpy(ctx.romfsfname, optarg, sizeof(ctx.romfsfname));
+				ctx.setromfsfname = 1;
 			break;
 
 			case 2:
-				strncpy(exheaderfname, optarg, sizeof(exheaderfname));
-				setexheaderfname = 1;
+				strncpy(ctx.exheaderfname, optarg, sizeof(ctx.exheaderfname));
+				ctx.setexheaderfname = 1;
+			break;
+
+			case 3:
+				strncpy(ctx.certsfname, optarg, sizeof(ctx.certsfname));
+				ctx.setcertsfname = 1;
+			break;
+
+			case 4:
+				strncpy(ctx.tikfname, optarg, sizeof(ctx.tikfname));
+				ctx.settikfname = 1;
+			break;
+
+			case 5:
+				strncpy(ctx.tmdfname, optarg, sizeof(ctx.tmdfname));
+				ctx.settmdfname = 1;
+			break;
+
+			case 6:
+				strncpy(ctx.contentsfname, optarg, sizeof(ctx.contentsfname));
+				ctx.setcontentsfname = 1;
+			break;
+
+			case 7:
+				strncpy(ctx.bannerfname, optarg, sizeof(ctx.bannerfname));
+				ctx.setbannerfname = 1;
 			break;
 
 			default:
@@ -298,7 +584,7 @@ int main(int argc, char* argv[])
 
 	if (optind == argc - 1) 
 	{
-		// Exactly one extra argument- a trace file
+		// Exactly one extra argument - an input file
 		strncpy(infname, argv[optind], sizeof(infname));
 	} 
 	else if ( (optind < argc) || (argc == 1) )
@@ -307,67 +593,56 @@ int main(int argc, char* argv[])
 		usage(argv[0]);
 	}
 
-	ctr_set_key(&cryptoctx, key);
+	memcpy(ctx.key, key, 16);
 
-	f = fopen(infname, "rb");
+	ctx.infile = fopen(infname, "rb");
 
-	if (!f)
+	if (!ctx.infile)
 		goto clean;
 
-	fseek(f, 0x100, SEEK_SET);
-	fread(&magic, 1, 4, f);
+	fseek(ctx.infile, 0x100, SEEK_SET);
+	fread(&magic, 1, 4, ctx.infile);
 
 	switch(getle32(magic))
 	{
 		case MAGIC_NCCH:
-			filetype = FILETYPE_CXI;
+			ctx.filetype = FILETYPE_CXI;
 		break;
 
 		case MAGIC_NCSD:
-			filetype = FILETYPE_CCI;
+			ctx.filetype = FILETYPE_CCI;
 		break;
 
 		default:
-			fprintf(stdout, "Unknown file\n");
-			exit(1);
+			fseek(ctx.infile, 0, SEEK_SET);
+			fread(magic, 1, 4, ctx.infile);
+			if (getle32(magic) == 0x2020)
+				ctx.filetype = FILETYPE_CIA;
 		break;
 	}
 
-	if (ncchoffset == ~0)
+	if (ctx.filetype == FILETYPE_UNKNOWN)
 	{
-		if (filetype == FILETYPE_CCI)
-			ncchoffset = 0x4000;
-		else if (filetype == FILETYPE_CXI)
-			ncchoffset = 0;
+		fprintf(stdout, "Unknown file\n");
+		exit(1);
 	}
 
-	fseek(f, ncchoffset, SEEK_SET);
-
-	fread(&ncchheader, 1, 0x200, f);
-
-	if (actions & Info)
-		decode_ncch_header(&ncchheader, ncchoffset);
-	if (actions & Decrypt)
+	switch(ctx.filetype)
 	{
-		if (setexefsfname)
-		{
-			fprintf(stdout, "Decrypting ExeFS...\n");
-			decrypt_ncch(f, &cryptoctx, ncchoffset, &ncchheader, exefsfname, NCCHTYPE_EXEFS);
-		}
-		if (setromfsfname)
-		{
-			fprintf(stdout, "Decrypting RomFS...\n");
-			decrypt_ncch(f, &cryptoctx, ncchoffset, &ncchheader, romfsfname, NCCHTYPE_ROMFS);
-		}
-		if (setexheaderfname)
-		{
-			fprintf(stdout, "Decrypting Extended Header...\n");
-			decrypt_ncch(f, &cryptoctx, ncchoffset, &ncchheader, exheaderfname, NCCHTYPE_EXTHEADER);
-		}
+		case FILETYPE_CXI:
+		case FILETYPE_CCI:
+			process_ncch(&ctx, ncchoffset);
+		break;
+
+		case FILETYPE_CIA:
+			process_cia(&ctx);
+		break;
 	}
+	
+
 clean:
-	if (f)
-		fclose(f);
+	if (ctx.infile)
+		fclose(ctx.infile);
 
 	return 0;
 }

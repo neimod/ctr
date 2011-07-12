@@ -4,10 +4,11 @@
 #include <stdlib.h>
 #include <time.h>
 
-void ctr_set_key( ctr_crypto_context* ctx,
-				  unsigned char key[16] )
+
+void ctr_set_iv( ctr_crypto_context* ctx,
+				  unsigned char iv[16] )
 {
-	aes_setkey_enc(&ctx->aes, key, 128);
+	memcpy(ctx->iv, iv, 16);
 }
 
 void ctr_add_counter( ctr_crypto_context* ctx,
@@ -40,7 +41,7 @@ void ctr_init_counter( ctr_crypto_context* ctx,
 				       unsigned char key[16],
 				       unsigned char ctr[12] )
 {
-	ctr_set_key(ctx, key);
+	aes_setkey_enc(&ctx->aes, key, 128);
 	ctr_set_counter(ctx, ctr);
 }
 
@@ -109,3 +110,34 @@ void ctr_crypt_counter( ctr_crypto_context* ctx,
 	}
 }
 
+void ctr_init_cbc_encrypt( ctr_crypto_context* ctx,
+						   unsigned char key[16],
+						   unsigned char iv[16] )
+{
+	aes_setkey_enc(&ctx->aes, key, 128);
+	ctr_set_iv(ctx, iv);
+}
+
+void ctr_init_cbc_decrypt( ctr_crypto_context* ctx,
+						   unsigned char key[16],
+						   unsigned char iv[16] )
+{
+	aes_setkey_dec(&ctx->aes, key, 128);
+	ctr_set_iv(ctx, iv);
+}
+
+void ctr_encrypt_cbc( ctr_crypto_context* ctx, 
+					  unsigned char* input,
+					  unsigned char* output,
+					  unsigned int size )
+{
+	aes_crypt_cbc(&ctx->aes, AES_ENCRYPT, size, ctx->iv, input, output);
+}
+
+void ctr_decrypt_cbc( ctr_crypto_context* ctx, 
+					  unsigned char* input,
+					  unsigned char* output,
+					  unsigned int size )
+{
+	aes_crypt_cbc(&ctx->aes, AES_DECRYPT, size, ctx->iv, input, output);
+}
