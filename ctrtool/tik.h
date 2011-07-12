@@ -33,6 +33,6 @@ typedef struct {
 	timelimit_entry timelimits[8];	
 } eticket;
 
-void tik_print(const u8 *blob, u32 size);
+void tik_print(u8 *blob, u32 size);
 
 #endif

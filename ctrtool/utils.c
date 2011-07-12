@@ -153,3 +153,26 @@ void memdump(FILE* fout, const char* prefix, const u8* data, u32 size)
 		offs += max;
 	}
 }
+
+int key_load(char *name, u8 *out_buf) {
+	//char path[MAX_PATH];
+	FILE *f;
+	u32  size=0;
+
+	//sprintf(path, "keys/%s", name);
+
+	f = fopen(name, "rb");
+
+	if (f == NULL) {
+		fprintf(stderr, "failed to load key file '%s'\n", name);
+		return -1;
+	}
+
+	fseek(f, 0, SEEK_END);
+	size = ftell(f);
+
+	fseek(f, 0, SEEK_SET);
+	fread(out_buf, size, 1, f);
+
+	fclose(f);
+}
