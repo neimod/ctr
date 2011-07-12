@@ -3,6 +3,8 @@
 #include <string.h>
 #include <getopt.h>
 #include "ctr.h"
+#include "ncch.h"
+#include "cia.h"
 
 enum actionflags
 {
