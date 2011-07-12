@@ -7,6 +7,7 @@
 #include "ncch.h"
 #include "cia.h"
 #include "tmd.h"
+#include "tik.h"
 
 enum actionflags
 {
@@ -308,6 +309,8 @@ void process_cia(toolcontext* ctx)
 	u32 offsetmeta = 0;
 	u32 offsetcontent = 0;
 
+	u8 *tmd, *tik;
+
 	fseek(ctx->infile, 0, SEEK_SET);
 
 	if (fread(&ciaheader, 1, sizeof(ciaheader), ctx->infile) != sizeof(ciaheader))
@@ -324,13 +327,26 @@ void process_cia(toolcontext* ctx)
 	offsettmd = align(offsettik + getle32(ciaheader.ticketsize), 64);
 	offsetcontent = align(offsettmd + getle32(ciaheader.tmdsize), 64);
 	offsetmeta = align(offsetcontent + getle32(ciaheader.contentsize), 64);
-	fseek(ctx->infile, offsettik + 0x1BF, SEEK_SET);
-	fread(titlekey, 1, 16, ctx->infile);
-	fseek(ctx->infile, offsettik + 0x1DC, SEEK_SET);
-	fread(titleid, 1, 16, ctx->infile);
+
+	tik = malloc(sizeof(eticket));
+	fseek(ctx->infile, offsettik, SEEK_SET);
+	fread(tik, sizeof(eticket), 1, ctx->infile);
 
 	if (ctx->actions & Info)
+		tik_print(tik, sizeof(eticket)); 
+
+	tmd = malloc(offsettmd - offsettik);
+	fseek(ctx->infile, offsettmd, SEEK_SET);
+	fread(tmd, offsettmd - offsettik, 1, ctx->infile);
+
+	if (ctx->actions & Info)
+		tmd_print(tmd, offsettmd - offsettik);
+
+	/*
+	if (ctx->actions & Info)
 	{
+		
+
 		fprintf(stdout, "Certificates offset:    0x%08x\n", offsetcerts);
 		fprintf(stdout, "Ticket offset:          0x%08x\n", offsettik);
 		fprintf(stdout, "TMD offset:             0x%08x\n", offsettmd);
@@ -339,6 +355,7 @@ void process_cia(toolcontext* ctx)
 		memdump(stdout, "Title ID:               ", titleid, 0x10);
 		memdump(stdout, "Encrypted title key:    ", titlekey, 0x10);
 	}
+	*/
 
 
 	if (ctx->actions & Extract)
@@ -402,6 +419,8 @@ int main(int argc, char* argv[])
 {
 	toolcontext ctx;
 	u8 magic[4];
+	u8 *tik, *tmd;
+
 	char infname[512];
 	int c;
 	u32 ncchoffset = ~0;

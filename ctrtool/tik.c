@@ -24,7 +24,9 @@ void tik_decrypt_titlekey(eticket *tik, u8 *out_buf) {
 }
 
 void tik_print(u8 *blob, u32 size) {
+	int i;
 	u8 dtk[0x10];
+
 
 	eticket *tik = (eticket*)blob;
 
@@ -43,5 +45,16 @@ void tik_print(u8 *blob, u32 size) {
 	memdump(stdout, "Decrypted Titlekey:     ", dtk, 0x10);
 
 	memdump(stdout,	"Ticket ID:              ", tik->ticket_id, 0x08);
+	fprintf(stdout, "Ticket Version:         %d\n", tik->ticket_version);
 	memdump(stdout,	"Title ID:               ", tik->title_id, 0x08);
+	fprintf(stdout, "Common Key Index:       %d\n", tik->commonkey_idx);
+
+	fprintf(stdout, "Content permission map:\n");
+	for(i = 0; i < 0x40; i++) {
+		printf(" %02x", tik->content_permissions[i]);
+
+		if ((i+1) % 8 == 0)
+			printf("\n");
+	}
+	printf("\n");
 }

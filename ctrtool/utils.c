@@ -175,4 +175,6 @@ int key_load(char *name, u8 *out_buf) {
 	fread(out_buf, size, 1, f);
 
 	fclose(f);
+
+	return 0;
 }

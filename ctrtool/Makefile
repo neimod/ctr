@@ -1,4 +1,4 @@
-OBJS = main.o aes.o ctr.o
+OBJS = main.o aes.o ctr.o tik.o tmd.o utils.o
 LIBS = 
 CFLAGS = -Wall
 OUTPUT = ctrtool
