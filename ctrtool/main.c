@@ -6,7 +6,7 @@
 
 enum actionflags
 {
-	Decrypt = (1<<0),
+	Extract = (1<<0),
 	Info = (1<<1),
 	NoDecrypt = (1<<2),
 };
@@ -56,7 +56,8 @@ static void usage(const char *argv0)
            "Options:\n"
            "  -i, --info         Show file info.\n"
 		   "                          This is the default action.\n"
-           "  -d, --decrypt      Decrypt file.\n"
+           "  -x, --extract      Extract data from file.\n"
+		   "                          This is also the default action.\n"
 		   "  -p, --plain        Extract data without decrypting.\n"
 		   "  -k, --key=file     Specify key file.\n"
 		   "CXI/CCI options:\n"
@@ -277,7 +278,8 @@ void decrypt_ncch(toolcontext* ctx, unsigned int ncchoffset, const ctr_ncchheade
 			goto clean;
 		}
 
-		ctr_crypt_counter(&ctx->cryptoctx, buffer, buffer, max);
+		if (0 == (ctx->actions & NoDecrypt))
+			ctr_crypt_counter(&ctx->cryptoctx, buffer, buffer, max);
 
 		if (max != fwrite(buffer, 1, max, fout))
 		{
@@ -311,7 +313,7 @@ void process_ncch(toolcontext* ctx, unsigned int ncchoffset)
 
 	if (ctx->actions & Info)
 		decode_ncch_header(&ncchheader, ncchoffset);
-	if (ctx->actions & Decrypt)
+	if (ctx->actions & Extract)
 	{
 		if (ctx->setexefsfname)
 		{
@@ -426,48 +428,51 @@ void process_cia(toolcontext* ctx)
 	}
 
 
-	if (ctx->setcertsfname)
+	if (ctx->actions & Extract)
 	{
-		fprintf(stdout, "Saving certificate chain to %s...\n", ctx->certsfname);
-		save_blob(ctx, offsetcerts, getle32(ciaheader.certsize), ctx->certsfname, Plain);
-	}
-
-	if (ctx->settikfname)
-	{
-		fprintf(stdout, "Saving ticket to %s...\n", ctx->tikfname);
-		save_blob(ctx, offsettik, getle32(ciaheader.ticketsize), ctx->tikfname, Plain);
-	}
-
-	if (ctx->settmdfname)
-	{
-		fprintf(stdout, "Saving TMD to %s...\n", ctx->tmdfname);
-		save_blob(ctx, offsettmd, getle32(ciaheader.tmdsize), ctx->tmdfname, Plain);
-	}
-
-	if (ctx->setcontentsfname)
-	{
-		
-
-		// Larger than 4GB content? Seems unlikely..
-		if (ctx->actions & NoDecrypt)
+		if (ctx->setcertsfname)
 		{
-			fprintf(stdout, "Saving content to %s...\n", ctx->contentsfname);
-			cryptotype = Plain;
+			fprintf(stdout, "Saving certificate chain to %s...\n", ctx->certsfname);
+			save_blob(ctx, offsetcerts, getle32(ciaheader.certsize), ctx->certsfname, Plain);
 		}
-		else
+
+		if (ctx->settikfname)
 		{
-			cryptotype = CBC;
-			memcpy(ctx->iv, titleid, 16);
-			fprintf(stdout, "Decrypting content to %s...\n", ctx->contentsfname);
-		}			
+			fprintf(stdout, "Saving ticket to %s...\n", ctx->tikfname);
+			save_blob(ctx, offsettik, getle32(ciaheader.ticketsize), ctx->tikfname, Plain);
+		}
 
-		save_blob(ctx, offsetcontent, (unsigned int)getle64(ciaheader.contentsize), ctx->contentsfname, cryptotype);
-	}
+		if (ctx->settmdfname)
+		{
+			fprintf(stdout, "Saving TMD to %s...\n", ctx->tmdfname);
+			save_blob(ctx, offsettmd, getle32(ciaheader.tmdsize), ctx->tmdfname, Plain);
+		}
 
-	if (ctx->setbannerfname)
-	{
-		fprintf(stdout, "Saving banner to %s...\n", ctx->bannerfname);
-		save_blob(ctx, offsetmeta, getle32(ciaheader.metasize), ctx->bannerfname, Plain);
+		if (ctx->setcontentsfname)
+		{
+			
+
+			// Larger than 4GB content? Seems unlikely..
+			if (ctx->actions & NoDecrypt)
+			{
+				fprintf(stdout, "Saving content to %s...\n", ctx->contentsfname);
+				cryptotype = Plain;
+			}
+			else
+			{
+				cryptotype = CBC;
+				memcpy(ctx->iv, titleid, 16);
+				fprintf(stdout, "Decrypting content to %s...\n", ctx->contentsfname);
+			}			
+
+			save_blob(ctx, offsetcontent, (unsigned int)getle64(ciaheader.contentsize), ctx->contentsfname, cryptotype);
+		}
+
+		if (ctx->setbannerfname)
+		{
+			fprintf(stdout, "Saving banner to %s...\n", ctx->bannerfname);
+			save_blob(ctx, offsetmeta, getle32(ciaheader.metasize), ctx->bannerfname, Plain);
+		}
 	}
 
 clean:
@@ -486,7 +491,7 @@ int main(int argc, char* argv[])
 	unsigned char key[16] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 	
 	memset(&ctx, 0, sizeof(toolcontext));
-	ctx.actions = Info;
+	ctx.actions = Info | Extract;
 	ctx.filetype = FILETYPE_UNKNOWN;
 
 
@@ -495,7 +500,7 @@ int main(int argc, char* argv[])
 		int option_index;
 		static struct option long_options[] = 
 		{
-			{"decrypt", 0, NULL, 'd'},
+			{"extract", 0, NULL, 'x'},
 			{"plain", 0, NULL, 'p'},
 			{"info", 0, NULL, 'i'},
 			{"exefs", 1, NULL, 0},
@@ -517,8 +522,8 @@ int main(int argc, char* argv[])
 
 		switch (c) 
 		{
-			case 'd':
-				ctx.actions |= Decrypt;
+			case 'x':
+				ctx.actions |= Extract;
 			break;
 
 			case 'p':
