@@ -19,6 +19,7 @@ u32 getbe16(const u8* p);
 
 void readkeyfile(u8* key, const char* keyfname);
 void memdump(FILE* fout, const char* prefix, const u8* data, u32 size);
+void hexdump(void *ptr, int buflen);
 
 #ifdef __cplusplus
 }
