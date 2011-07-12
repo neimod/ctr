@@ -29,10 +29,21 @@ u32 getle32(const u8* p)
 	return (p[0]<<0) | (p[1]<<8) | (p[2]<<16) | (p[3]<<24);
 }
 
+u32 getbe32(const u8* p)
+{
+	return (p[0]<<24) | (p[1]<<16) | (p[2]<<8) | (p[3]<<0);
+}
+
 u32 getle16(const u8* p)
 {
 	return (p[0]<<0) | (p[1]<<8);
 }
+
+u32 getbe16(const u8* p)
+{
+	return (p[0]<<8) | (p[1]<<0);
+}
+
 
 
 void readkeyfile(u8* key, const char* keyfname)
