@@ -13,6 +13,7 @@ u32 align(u32 offset, u32 alignment);
 u64 getle64(const u8* p);
 u32 getle32(const u8* p);
 u32 getle16(const u8* p);
+u64 getbe64(const u8* p);
 u32 getbe32(const u8* p);
 u32 getbe16(const u8* p);
 
