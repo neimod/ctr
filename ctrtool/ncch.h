@@ -1,6 +1,8 @@
 #ifndef __NCCH_H__
 #define __NCCH_H__
 
+#include "types.h"
+
 typedef enum
 {
 	NCCHTYPE_EXTHEADER = 1,
@@ -39,5 +41,7 @@ typedef struct
 	u8 exefssuperblockhash[0x20];
 	u8 romfssuperblockhash[0x20];
 } ctr_ncchheader;
+
+void ncch_print(u8 *blob, u32 offset);
 
 #endif

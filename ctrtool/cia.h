@@ -14,4 +14,6 @@ typedef struct
 	u8 contentindex[0x2000];
 } ctr_ciaheader;
 
+void cia_print(u8 *blob);
+
 #endif
