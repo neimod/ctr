@@ -42,6 +42,6 @@ typedef struct
 	u8 romfssuperblockhash[0x20];
 } ctr_ncchheader;
 
-void ncch_print(u8 *blob, u32 offset);
+void ncch_print(const u8 *blob, u32 offset);
 
 #endif

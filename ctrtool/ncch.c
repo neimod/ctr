@@ -5,7 +5,7 @@
 #include "ncch.h"
 #include "utils.h"
 
-void ncch_print(u8 *blob, u32 offset) {
+void ncch_print(const u8 *blob, u32 offset) {
 	char magic[5];
 	char productcode[0x11];
 

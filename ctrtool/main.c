@@ -273,6 +273,13 @@ void process_cia(toolcontext* ctx)
 	u32 offsettmd = 0;
 	u32 offsetmeta = 0;
 	u32 offsetcontent = 0;
+	u32 headersize;
+	u32 certsize;
+	u32 tiksize;
+	u32 tmdsize;
+	u32 contentsize;
+	u32 metasize;
+	
 
 	u8 *tmd, *tik;
 
@@ -285,27 +292,34 @@ void process_cia(toolcontext* ctx)
 	}
 
 	if (ctx->actions & Info)
-		cia_print((u8*)&ciaheader);
+		cia_print((const u8*)&ciaheader);
 
-	offsetcerts = align(getle32(ciaheader.headersize), 64);
-	offsettik = align(offsetcerts + getle32(ciaheader.certsize), 64);
-	offsettmd = align(offsettik + getle32(ciaheader.ticketsize), 64);
-	offsetcontent = align(offsettmd + getle32(ciaheader.tmdsize), 64);
-	offsetmeta = align(offsetcontent + getle32(ciaheader.contentsize), 64);
+	headersize = getle32(ciaheader.headersize);
+	certsize = getle32(ciaheader.certsize);
+	tiksize = getle32(ciaheader.ticketsize);
+	tmdsize = getle32(ciaheader.tmdsize);
+	contentsize = (u32)getle64(ciaheader.contentsize);
+	metasize = getle32(ciaheader.metasize);
+	
+	offsetcerts = align(headersize, 64);
+	offsettik = align(offsetcerts + certsize, 64);
+	offsettmd = align(offsettik + tiksize, 64);
+	offsetcontent = align(offsettmd + tmdsize, 64);
+	offsetmeta = align(offsetcontent + contentsize, 64);
 
-	tik = malloc(sizeof(eticket));
+	tik = malloc(tiksize);
 	fseek(ctx->infile, offsettik, SEEK_SET);
-	fread(tik, sizeof(eticket), 1, ctx->infile);
+	fread(tik, tiksize, 1, ctx->infile);
 
 	if (ctx->actions & Info)
-		tik_print(tik, sizeof(eticket)); 
+		tik_print(tik, tiksize); 
 
-	tmd = malloc(offsettmd - offsettik);
+	tmd = malloc(tmdsize);
 	fseek(ctx->infile, offsettmd, SEEK_SET);
-	fread(tmd, offsettmd - offsettik, 1, ctx->infile);
+	fread(tmd, tmdsize, 1, ctx->infile);
 
 	if (ctx->actions & Info)
-		tmd_print(tmd, offsettmd - offsettik);
+		tmd_print(tmd, tmdsize);
 
 	/*
 	if (ctx->actions & Info)
@@ -328,25 +342,19 @@ void process_cia(toolcontext* ctx)
 		if (ctx->setcertsfname)
 		{
 			fprintf(stdout, "Saving certificate chain to %s...\n", ctx->certsfname);
-			save_blob(ctx, offsetcerts, getle32(ciaheader.certsize), ctx->certsfname, Plain);
+			save_blob(ctx, offsetcerts, certsize, ctx->certsfname, Plain);
 		}
 
 		if (ctx->settikfname)
 		{
 			fprintf(stdout, "Saving ticket to %s...\n", ctx->tikfname);
-			save_blob(ctx, offsettik, getle32(ciaheader.ticketsize), ctx->tikfname, Plain);
+			save_blob(ctx, offsettik, tiksize, ctx->tikfname, Plain);
 		}
 
 		if (ctx->settmdfname)
 		{
-			unsigned char blob[16*1024];
 			fprintf(stdout, "Saving TMD to %s...\n", ctx->tmdfname);
-
-			fseek(ctx->infile, offsettmd, SEEK_SET);
-			fread(blob, 1, 16*1024, ctx->infile);
-			tmd_print(blob, sizeof(blob));
-
-			save_blob(ctx, offsettmd, getle32(ciaheader.tmdsize), ctx->tmdfname, Plain);
+			save_blob(ctx, offsettmd, tmdsize, ctx->tmdfname, Plain);
 		}
 
 		if (ctx->setcontentsfname)
@@ -366,13 +374,13 @@ void process_cia(toolcontext* ctx)
 				fprintf(stdout, "Decrypting content to %s...\n", ctx->contentsfname);
 			}			
 
-			save_blob(ctx, offsetcontent, (u32)getle64(ciaheader.contentsize), ctx->contentsfname, cryptotype);
+			save_blob(ctx, offsetcontent, contentsize, ctx->contentsfname, cryptotype);
 		}
 
 		if (ctx->setbannerfname)
 		{
 			fprintf(stdout, "Saving banner to %s...\n", ctx->bannerfname);
-			save_blob(ctx, offsetmeta, getle32(ciaheader.metasize), ctx->bannerfname, Plain);
+			save_blob(ctx, offsetmeta, metasize, ctx->bannerfname, Plain);
 		}
 	}
 

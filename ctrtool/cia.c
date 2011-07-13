@@ -4,8 +4,8 @@
 #include "utils.h"
 #include "cia.h"
 
-void cia_print(u8 *blob) {
-	ctr_ciaheader *header = (ctr_ciaheader*)blob;	
+void cia_print(const u8* blob) {
+	ctr_ciaheader* header = (ctr_ciaheader*)blob;	
 
 	fprintf(stdout, "Header size             0x%08x\n", getle32(header->headersize));
 	fprintf(stdout, "Type                    %04x\n", getle16(header->type));
