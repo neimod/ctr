@@ -191,7 +191,7 @@ void process_ncch(toolcontext* ctx, u32 ncchoffset)
 	fread(&ncchheader, 1, 0x200, ctx->infile);
 
 	if (ctx->actions & Info)
-		ncch_print(&ncchheader, ncchoffset);
+		ncch_print((u8*)&ncchheader, ncchoffset);
 
 	if (ctx->actions & Extract)
 	{
@@ -268,7 +268,6 @@ void process_cia(toolcontext* ctx)
 	ctr_ciaheader ciaheader;
 	u32 cryptotype;
 	u8 titleid[16];
-	u8 titlekey[16];
 	u32 offsetcerts = 0;
 	u32 offsettik = 0;
 	u32 offsettmd = 0;
