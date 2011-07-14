@@ -5,10 +5,12 @@
 #include "utils.h"
 #include "ctr.h"
 #include "ncch.h"
+#include "ncsd.h"
 #include "cia.h"
 #include "tmd.h"
 #include "tik.h"
 #include "keyset.h"
+
 
 enum actionflags
 {
@@ -187,6 +189,15 @@ void process_ncch(toolcontext* ctx, u32 ncchoffset)
 			ncchoffset = 0x4000;
 		else if (ctx->filetype == FILETYPE_CXI)
 			ncchoffset = 0;
+	}
+
+	if (ctx->filetype == FILETYPE_CCI)
+	{
+		unsigned char ncsdblob[0x200];
+
+		fseek(ctx->infile, 0, SEEK_SET);
+		fread(ncsdblob, 1, 0x200, ctx->infile);
+		ncsd_print(ncsdblob, 0x200, &ctx->keys);
 	}
 
 	fseek(ctx->infile, ncchoffset, SEEK_SET);
