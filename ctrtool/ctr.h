@@ -1,9 +1,11 @@
 #ifndef _CTR_H_
 #define _CTR_H_
 
-#include "aes.h"
+#include "polarssl/aes.h"
+#include "polarssl/rsa.h"
+#include "polarssl/sha2.h"
 #include "types.h"
-
+#include "keyset.h"
 
 #define MAGIC_NCCH 0x4843434E
 #define MAGIC_NCSD 0x4453434E
@@ -21,6 +23,7 @@ typedef struct
 	u8 ctr[16];
 	u8 iv[16];
 	aes_context aes;
+	rsa_context rsa;
 }
 ctr_crypto_context;
 
@@ -72,6 +75,18 @@ void		ctr_decrypt_cbc( ctr_crypto_context* ctx,
 							  u8* output,
 							  u32 size );
 
+int			ctr_rsa_init( ctr_crypto_context* ctx, 
+						  rsakey2048* key );
+
+void		ctr_rsa_free( ctr_crypto_context* ctx );
+
+int			ctr_rsa_verify_hash( const u8* signature, 
+								 const u8 hash[0x20], 
+								 rsakey2048* key);
+
+void		ctr_sha_256( const u8* data, 
+						 u32 size, 
+						 u8 hash[0x20] );
 
 #ifdef __cplusplus
 }

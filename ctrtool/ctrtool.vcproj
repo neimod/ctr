@@ -41,7 +41,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="windows"
+				AdditionalIncludeDirectories="windows;."
 				PreprocessorDefinitions="WIN32;_DEBUG;_CONSOLE"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
@@ -49,6 +49,8 @@
 				UsePrecompiledHeader="0"
 				WarningLevel="3"
 				DebugInformationFormat="4"
+				DisableSpecificWarnings="4996"
+				UseFullPaths="false"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -172,7 +174,7 @@
 			UniqueIdentifier="{4FC737F1-C7A5-4376-A066-2A32D752A2FF}"
 			>
 			<File
-				RelativePath=".\aes.c"
+				RelativePath=".\cia.c"
 				>
 			</File>
 			<File
@@ -188,7 +190,19 @@
 				>
 			</File>
 			<File
+				RelativePath=".\keyset.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\main.c"
+				>
+			</File>
+			<File
+				RelativePath=".\ncch.c"
+				>
+			</File>
+			<File
+				RelativePath=".\ncsd.c"
 				>
 			</File>
 			<File
@@ -203,16 +217,52 @@
 				RelativePath=".\utils.c"
 				>
 			</File>
+			<Filter
+				Name="polarssl"
+				>
+				<File
+					RelativePath=".\polarssl\aes.c"
+					>
+				</File>
+				<File
+					RelativePath=".\polarssl\bignum.c"
+					>
+				</File>
+				<File
+					RelativePath=".\polarssl\rsa.c"
+					>
+				</File>
+				<File
+					RelativePath=".\polarssl\sha2.c"
+					>
+				</File>
+			</Filter>
+			<Filter
+				Name="tinyxml"
+				>
+				<File
+					RelativePath=".\tinyxml\tinystr.cpp"
+					>
+				</File>
+				<File
+					RelativePath=".\tinyxml\tinyxml.cpp"
+					>
+				</File>
+				<File
+					RelativePath=".\tinyxml\tinyxmlerror.cpp"
+					>
+				</File>
+				<File
+					RelativePath=".\tinyxml\tinyxmlparser.cpp"
+					>
+				</File>
+			</Filter>
 		</Filter>
 		<Filter
 			Name="Header Files"
 			Filter="h;hpp;hxx;hm;inl;inc;xsd"
 			UniqueIdentifier="{93995380-89BD-4b04-88EB-625FBE52EBFB}"
 			>
-			<File
-				RelativePath=".\aes.h"
-				>
-			</File>
 			<File
 				RelativePath=".\cia.h"
 				>
@@ -226,7 +276,15 @@
 				>
 			</File>
 			<File
+				RelativePath=".\keyset.h"
+				>
+			</File>
+			<File
 				RelativePath=".\ncch.h"
+				>
+			</File>
+			<File
+				RelativePath=".\ncsd.h"
 				>
 			</File>
 			<File
@@ -245,6 +303,46 @@
 				RelativePath=".\utils.h"
 				>
 			</File>
+			<Filter
+				Name="polarssl"
+				>
+				<File
+					RelativePath=".\polarssl\aes.h"
+					>
+				</File>
+				<File
+					RelativePath=".\polarssl\bignum.h"
+					>
+				</File>
+				<File
+					RelativePath=".\polarssl\bn_mul.h"
+					>
+				</File>
+				<File
+					RelativePath=".\polarssl\config.h"
+					>
+				</File>
+				<File
+					RelativePath=".\polarssl\rsa.h"
+					>
+				</File>
+				<File
+					RelativePath=".\polarssl\sha2.h"
+					>
+				</File>
+			</Filter>
+			<Filter
+				Name="tinyxml"
+				>
+				<File
+					RelativePath=".\tinyxml\tinystr.h"
+					>
+				</File>
+				<File
+					RelativePath=".\tinyxml\tinyxml.h"
+					>
+				</File>
+			</Filter>
 		</Filter>
 		<Filter
 			Name="Resource Files"

@@ -5,15 +5,19 @@
 #include "utils.h"
 #include "ctr.h"
 #include "ncch.h"
+#include "ncsd.h"
 #include "cia.h"
 #include "tmd.h"
 #include "tik.h"
+#include "keyset.h"
+
 
 enum actionflags
 {
 	Extract = (1<<0),
 	Info = (1<<1),
 	NoDecrypt = (1<<2),
+	Verbose = (1<<3),
 };
 
 enum cryptotype
@@ -27,8 +31,8 @@ typedef struct
 {
 	int actions;
 	u32 filetype;
-	u8 key[16];
-	u8 iv[16];
+//	u8 key[16];
+//	u8 iv[16];
 	char exheaderfname[512];
 	char romfsfname[512];
 	char exefsfname[512];
@@ -48,7 +52,7 @@ typedef struct
 	int settmdfname;
 	int setcontentsfname;
 	int setbannerfname;
-	
+	keyset keys;
 
 } toolcontext;
 
@@ -64,7 +68,8 @@ static void usage(const char *argv0)
            "  -x, --extract      Extract data from file.\n"
 		   "                          This is also the default action.\n"
 		   "  -p, --plain        Extract data without decrypting.\n"
-		   "  -k, --key=file     Specify key file.\n"
+		   "  -k, --keyset=file  Specify keyset file.\n"
+		   "  -v, --verbose      Give verbose output.\n"
 		   "CXI/CCI options:\n"
 		   "  -n, --ncch=offs    Specify offset for NCCH header.\n"
 		   "  --exefs=file       Specify ExeFS filepath.\n"
@@ -143,7 +148,7 @@ void decrypt_ncch(toolcontext* ctx, u32 ncchoffset, const ctr_ncchheader* header
 		counter[i] = header->partitionid[7-i];
 	counter[8] = type;
 
-	ctr_init_counter(&ctx->cryptoctx, ctx->key, counter);
+	ctr_init_counter(&ctx->cryptoctx, ctx->keys.ncchctrkey.data, counter);
 
 	while(size)
 	{
@@ -184,6 +189,15 @@ void process_ncch(toolcontext* ctx, u32 ncchoffset)
 			ncchoffset = 0x4000;
 		else if (ctx->filetype == FILETYPE_CXI)
 			ncchoffset = 0;
+	}
+
+	if (ctx->filetype == FILETYPE_CCI)
+	{
+		unsigned char ncsdblob[0x200];
+
+		fseek(ctx->infile, 0, SEEK_SET);
+		fread(ncsdblob, 1, 0x200, ctx->infile);
+		ncsd_print(ncsdblob, 0x200, &ctx->keys);
 	}
 
 	fseek(ctx->infile, ncchoffset, SEEK_SET);
@@ -227,10 +241,6 @@ void save_blob(toolcontext* ctx, u32 offset, u32 size, const char* outfname, u32
 		goto clean;
 	}
 
-	if (type == CBC)
-	{
-		ctr_init_cbc_decrypt(&ctx->cryptoctx, ctx->key, ctx->iv);
-	}
 
 
 	while(size)
@@ -279,6 +289,7 @@ void process_cia(toolcontext* ctx)
 	u32 tmdsize;
 	u32 contentsize;
 	u32 metasize;
+	u8 titlekey[16];
 	
 
 	u8 *tmd, *tik;
@@ -311,8 +322,11 @@ void process_cia(toolcontext* ctx)
 	fseek(ctx->infile, offsettik, SEEK_SET);
 	fread(tik, tiksize, 1, ctx->infile);
 
+
 	if (ctx->actions & Info)
-		tik_print(tik, tiksize); 
+		tik_print(&ctx->keys, tik, tiksize); 
+
+	tik_decrypt_titlekey(&ctx->keys, tik, titlekey);
 
 	tmd = malloc(tmdsize);
 	fseek(ctx->infile, offsettmd, SEEK_SET);
@@ -370,7 +384,7 @@ void process_cia(toolcontext* ctx)
 			else
 			{
 				cryptotype = CBC;
-				memcpy(ctx->iv, titleid, 16);
+				ctr_init_cbc_decrypt(&ctx->cryptoctx, titlekey, titleid);
 				fprintf(stdout, "Decrypting content to %s...\n", ctx->contentsfname);
 			}			
 
@@ -397,11 +411,15 @@ int main(int argc, char* argv[])
 	int c;
 	u32 ncchoffset = ~0;
 	u8 key[16] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+	char keysetfname[512] = "keys.xml";
 	
 	memset(&ctx, 0, sizeof(toolcontext));
 	ctx.actions = Info | Extract;
 	ctx.filetype = FILETYPE_UNKNOWN;
 
+	keyset_init(&ctx.keys);
+
+	
 
 	while (1) 
 	{
@@ -419,12 +437,13 @@ int main(int argc, char* argv[])
 			{"tmd", 1, NULL, 5},
 			{"contents", 1, NULL, 6},
 			{"banner", 1, NULL, 7},
-			{"key", 1, NULL, 'k'},
+			{"keyset", 1, NULL, 'k'},
 			{"ncch", 1, NULL, 'n'},
+			{"verbose", 0, NULL, 'v'},
 			{NULL},
 		};
 
-		c = getopt_long(argc, argv, "dik:n:", long_options, &option_index);
+		c = getopt_long(argc, argv, "xivpk:n:", long_options, &option_index);
 		if (c == -1)
 			break;
 
@@ -432,6 +451,10 @@ int main(int argc, char* argv[])
 		{
 			case 'x':
 				ctx.actions |= Extract;
+			break;
+
+			case 'v':
+				ctx.actions |= Verbose;
 			break;
 
 			case 'p':
@@ -447,7 +470,8 @@ int main(int argc, char* argv[])
 			break;
 
 			case 'k':
-				readkeyfile(key, optarg);
+				//readkeyfile(key, optarg);
+				strncpy(keysetfname, optarg, sizeof(keysetfname));
 			break;
 
 			case 0:
@@ -506,11 +530,11 @@ int main(int argc, char* argv[])
 		usage(argv[0]);
 	}
 
-	memcpy(ctx.key, key, 16);
+	keyset_load(&ctx.keys, keysetfname, ctx.actions & Verbose);
 
 	ctx.infile = fopen(infname, "rb");
 
-	if (!ctx.infile)
+	if (ctx.infile == 0)
 		goto clean;
 
 	fseek(ctx.infile, 0x100, SEEK_SET);

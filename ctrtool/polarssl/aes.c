@@ -1,10 +1,12 @@
 /*
  *  FIPS-197 compliant AES implementation
  *
- *  Copyright (C) 2006-2009, Paul Bakker <polarssl_maintainer at polarssl.org>
- *  All rights reserved.
+ *  Copyright (C) 2006-2010, Brainspark B.V.
  *
- *  Joined copyright on original XySSL code with: Christophe Devine
+ *  This file is part of PolarSSL (http://www.polarssl.org)
+ *  Lead Maintainer: Paul Bakker <polarssl_maintainer at polarssl.org>
+ *
+ *  All rights reserved.
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -27,11 +29,12 @@
  *  http://csrc.nist.gov/publications/fips/fips197/fips-197.pdf
  */
 
-#define POLARSSL_AES_C
+#include "polarssl/config.h"
+
 #if defined(POLARSSL_AES_C)
 
-#include "aes.h"
-//#include "polarssl/padlock.h"
+#include "polarssl/aes.h"
+#include "polarssl/padlock.h"
 
 #include <string.h>
 
@@ -438,7 +441,7 @@ static void aes_gen_tables( void )
 /*
  * AES key schedule (encryption)
  */
-int aes_setkey_enc( aes_context *ctx, unsigned char *key, int keysize )
+int aes_setkey_enc( aes_context *ctx, const unsigned char *key, int keysize )
 {
     int i;
     unsigned long *RK;
@@ -543,7 +546,7 @@ int aes_setkey_enc( aes_context *ctx, unsigned char *key, int keysize )
 /*
  * AES key schedule (decryption)
  */
-int aes_setkey_dec( aes_context *ctx, unsigned char *key, int keysize )
+int aes_setkey_dec( aes_context *ctx, const unsigned char *key, int keysize )
 {
     int i, j;
     aes_context cty;
@@ -646,9 +649,9 @@ int aes_setkey_dec( aes_context *ctx, unsigned char *key, int keysize )
 /*
  * AES-ECB block encryption/decryption
  */
-void aes_crypt_ecb( aes_context *ctx,
+int aes_crypt_ecb( aes_context *ctx,
                     int mode,
-                    unsigned char input[16],
+                    const unsigned char input[16],
                     unsigned char output[16] )
 {
     int i;
@@ -658,7 +661,11 @@ void aes_crypt_ecb( aes_context *ctx,
     if( padlock_supports( PADLOCK_ACE ) )
     {
         if( padlock_xcryptecb( ctx, mode, input, output ) == 0 )
-            return;
+            return( 0 );
+
+        // If padlock data misaligned, we just fall back to
+        // unaccelerated mode
+        //
     }
 #endif
 
@@ -742,26 +749,35 @@ void aes_crypt_ecb( aes_context *ctx,
     PUT_ULONG_LE( X1, output,  4 );
     PUT_ULONG_LE( X2, output,  8 );
     PUT_ULONG_LE( X3, output, 12 );
+
+    return( 0 );
 }
 
 /*
  * AES-CBC buffer encryption/decryption
  */
-void aes_crypt_cbc( aes_context *ctx,
+int aes_crypt_cbc( aes_context *ctx,
                     int mode,
                     int length,
                     unsigned char iv[16],
-                    unsigned char *input,
+                    const unsigned char *input,
                     unsigned char *output )
 {
     int i;
     unsigned char temp[16];
 
+    if( length % 16 )
+        return( POLARSSL_ERR_AES_INVALID_INPUT_LENGTH );
+
 #if defined(POLARSSL_PADLOCK_C) && defined(POLARSSL_HAVE_X86)
     if( padlock_supports( PADLOCK_ACE ) )
     {
         if( padlock_xcryptcbc( ctx, mode, length, iv, input, output ) == 0 )
-            return;
+            return( 0 );
+        
+        // If padlock data misaligned, we just fall back to
+        // unaccelerated mode
+        //
     }
 #endif
 
@@ -797,17 +813,19 @@ void aes_crypt_cbc( aes_context *ctx,
             length -= 16;
         }
     }
+
+    return( 0 );
 }
 
 /*
  * AES-CFB128 buffer encryption/decryption
  */
-void aes_crypt_cfb128( aes_context *ctx,
+int aes_crypt_cfb128( aes_context *ctx,
                        int mode,
                        int length,
                        int *iv_off,
                        unsigned char iv[16],
-                       unsigned char *input,
+                       const unsigned char *input,
                        unsigned char *output )
 {
     int c, n = *iv_off;
@@ -840,6 +858,8 @@ void aes_crypt_cfb128( aes_context *ctx,
     }
 
     *iv_off = n;
+
+    return( 0 );
 }
 
 #if defined(POLARSSL_SELF_TEST)

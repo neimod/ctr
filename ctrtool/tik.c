@@ -6,24 +6,32 @@
 #include "ctr.h"
 #include "utils.h"
 
-void tik_decrypt_titlekey(eticket *tik, u8 *out_buf) {
-	u8 buf[16], key[16], iv[16];
+int tik_decrypt_titlekey(keyset* keys, const u8* tikblob, u8* decryptedkey) 
+{
+	u8 buf[16], iv[16];
+	eticket *tik = (eticket*)tikblob;
 	ctr_crypto_context ctx;
+	
+
+	memset(decryptedkey, 0, 0x10);
+
+	if (!keys->commonkey.valid)
+		return 0;
 
 	memcpy(buf, tik->encrypted_title_key, 0x10);
 
-	if (key_load("common-key", key) == -1) {
-		exit(-1);
-	}
 
 	memset(iv, 0, 0x10);
 	memcpy(iv, &tik->title_id, 8);
 
-	ctr_init_cbc_decrypt(&ctx, key, iv);
-	ctr_decrypt_cbc(&ctx, buf, out_buf, 0x10);
+	ctr_init_cbc_decrypt(&ctx, keys->commonkey.data, iv);
+	ctr_decrypt_cbc(&ctx, buf, decryptedkey, 0x10);
+
+	return 1;
 }
 
-void tik_print(u8 *blob, u32 size) {
+void tik_print(keyset* keys, const u8 *blob, u32 size) 
+{
 	int i;
 	u8 dtk[0x10];
 
@@ -41,8 +49,8 @@ void tik_print(u8 *blob, u32 size) {
 	fprintf(stdout, "\n");
 
 	memdump(stdout, "Encrypted Titlekey:     ", tik->encrypted_title_key, 0x10);
-	tik_decrypt_titlekey(tik, dtk);
-	memdump(stdout, "Decrypted Titlekey:     ", dtk, 0x10);
+	if (tik_decrypt_titlekey(keys, blob, dtk))
+		memdump(stdout, "Decrypted Titlekey:     ", dtk, 0x10);
 
 	memdump(stdout,	"Ticket ID:              ", tik->ticket_id, 0x08);
 	fprintf(stdout, "Ticket Version:         %d\n", tik->ticket_version);
