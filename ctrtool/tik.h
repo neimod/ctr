@@ -2,6 +2,7 @@
 #define __TIK_H__
 
 #include "types.h"
+#include "keyset.h"
 
 typedef struct {
 	u32 enable_timelimit;
@@ -33,6 +34,7 @@ typedef struct {
 	timelimit_entry timelimits[8];	
 } eticket;
 
-void tik_print(u8 *blob, u32 size);
+int  tik_decrypt_titlekey(keyset* keys, const u8* tikblob, u8* decryptedkey);
+void tik_print(keyset* keys, const u8 *blob, u32 size);
 
 #endif

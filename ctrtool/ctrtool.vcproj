@@ -190,6 +190,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\keyset.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\main.c"
 				>
 			</File>
@@ -261,6 +265,10 @@
 			</File>
 			<File
 				RelativePath=".\windows\getopt.h"
+				>
+			</File>
+			<File
+				RelativePath=".\keyset.h"
 				>
 			</File>
 			<File
