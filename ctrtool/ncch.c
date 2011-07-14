@@ -4,14 +4,37 @@
 #include "types.h"
 #include "ncch.h"
 #include "utils.h"
+#include "ctr.h"
+
+int ncch_signature_verify(const u8* blob, u32 size, rsakey2048* key)
+{
+	u8 hash[0x20];
+	u8 output[0x100];
+
+	ctr_rsa_public(blob, output, key);
+
+	memdump(stdout, "RSA decrypted:      ", output, 0x100);
+
+	ctr_sha_256(blob + 0x100, 0x100, hash);
+	return ctr_rsa_verify_hash(blob, hash, key);
+}
 
 
-void ncch_print(const u8 *blob, u32 offset)
+void ncch_print(const u8 *blob, u32 size, u32 offset, keyset* keys)
 {
 	char magic[5];
 	char productcode[0x11];
 	ctr_ncchheader *header = (ctr_ncchheader*)blob;
+	int sigcheck;
 
+
+	sigcheck = ncch_signature_verify(blob, size, &keys->ncchrsakey);
+	if (!sigcheck)
+		sigcheck = ncch_signature_verify(blob, size, &keys->ncchdlprsakey);
+	if (!sigcheck)
+		sigcheck = ncch_signature_verify(blob, size, &keys->crrrsakey);
+	if (!sigcheck)
+		sigcheck = ncch_signature_verify(blob, size, &keys->ncsdrsakey);
 
 	memcpy(magic, header->magic, 4);
 	magic[4] = 0;
@@ -19,7 +42,10 @@ void ncch_print(const u8 *blob, u32 offset)
 	productcode[0x10] = 0;
 
 	fprintf(stdout, "Header:                 %s\n", magic);
-	memdump(stdout, "Signature:              ", header->signature, 0x100);       
+	if (sigcheck)
+		memdump(stdout, "Signature (GOOD):       ", header->signature, 0x100);
+	else
+		memdump(stdout, "Signature (FAIL):       ", header->signature, 0x100);
 	fprintf(stdout, "Content size:           0x%08x\n", getle32(header->contentsize)*0x200);
 	fprintf(stdout, "Partition id:           %016llx\n", getle64(header->partitionid));
 	fprintf(stdout, "Maker code:             %04x\n", getle16(header->makercode));

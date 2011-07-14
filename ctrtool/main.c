@@ -10,7 +10,7 @@
 #include "tmd.h"
 #include "tik.h"
 #include "keyset.h"
-
+#include "exefs.h"
 
 enum actionflags
 {
@@ -108,6 +108,7 @@ void decrypt_ncch(toolcontext* ctx, u32 ncchoffset, const ctr_ncchheader* header
 	u8 counter[16];
 	u32 i;
 	char* outfname = 0;
+	u32 firstblock = 1;
 
 
 	if (type == NCCHTYPE_EXEFS)
@@ -171,7 +172,13 @@ void decrypt_ncch(toolcontext* ctx, u32 ncchoffset, const ctr_ncchheader* header
 			goto clean;
 		}
 
+		if (firstblock && type == NCCHTYPE_EXEFS && ctx->actions & Info)
+		{
+			exefs_print(buffer, max);
+		}
+
 		size -= max;
+		firstblock = 0;
 	}
 clean:
 	if (fout)
@@ -205,7 +212,28 @@ void process_ncch(toolcontext* ctx, u32 ncchoffset)
 	fread(&ncchheader, 1, 0x200, ctx->infile);
 
 	if (ctx->actions & Info)
-		ncch_print((const u8*)&ncchheader, ncchoffset);
+	{
+		u8* bigbuffer = 0;
+		u8 hash[0x20];
+		u32 offset;
+		u32 size;
+
+		ncch_print((const u8*)&ncchheader, sizeof(ncchheader), ncchoffset, &ctx->keys);
+
+
+		
+		offset = ncchoffset + getle32(ncchheader.exefsoffset) * 0x200;
+		size = getle32(ncchheader.exefssize) * 0x200;
+
+		bigbuffer = malloc(size);
+		fseek(ctx->infile, offset, SEEK_SET);
+		fread(bigbuffer, 1, size, ctx->infile);
+
+		ctr_sha_256(bigbuffer, size, hash);
+		free(bigbuffer);
+
+		memdump(stdout, "ExeFS hash:   ", hash, 0x20);
+	}
 
 	if (ctx->actions & Extract)
 	{

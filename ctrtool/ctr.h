@@ -80,9 +80,13 @@ int			ctr_rsa_init( ctr_crypto_context* ctx,
 
 void		ctr_rsa_free( ctr_crypto_context* ctx );
 
-int			ctr_rsa_verify_hash( const u8* signature, 
+int			ctr_rsa_verify_hash( const u8 signature[0x100], 
 								 const u8 hash[0x20], 
 								 rsakey2048* key);
+
+int			ctr_rsa_public( const u8 signature[0x100], 
+						    u8 output[0x100], 
+							rsakey2048* key );
 
 void		ctr_sha_256( const u8* data, 
 						 u32 size, 

@@ -2,6 +2,8 @@
 #define __NCCH_H__
 
 #include "types.h"
+#include "keyset.h"
+
 
 typedef enum
 {
@@ -42,6 +44,6 @@ typedef struct
 	u8 romfssuperblockhash[0x20];
 } ctr_ncchheader;
 
-void ncch_print(const u8 *blob, u32 offset);
+void ncch_print(const u8 *blob, u32 size, u32 offset, keyset* keys);
 
 #endif

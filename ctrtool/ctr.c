@@ -183,7 +183,7 @@ clean:
 	return 0;
 }
 
-int ctr_rsa_verify_hash(const u8* signature, const u8 hash[0x20], rsakey2048* key)
+int ctr_rsa_verify_hash(const u8 signature[0x100], const u8 hash[0x20], rsakey2048* key)
 {
 	ctr_crypto_context ctx;
 	u32 result;
@@ -199,6 +199,24 @@ int ctr_rsa_verify_hash(const u8* signature, const u8 hash[0x20], rsakey2048* ke
 	else
 		return 0;
 }
+
+int ctr_rsa_public(const u8 signature[0x100], u8 output[0x100], rsakey2048* key)
+{
+	ctr_crypto_context ctx;
+	u32 result;
+
+	ctr_rsa_init(&ctx, key);
+
+	result = rsa_public(&ctx.rsa, signature, output);
+
+	ctr_rsa_free(&ctx);
+
+	if (result == 0)
+		return 1;
+	else
+		return 0;
+}
+
 
 void ctr_rsa_free(ctr_crypto_context* ctx)
 {

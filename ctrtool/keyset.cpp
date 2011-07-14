@@ -103,6 +103,9 @@ int keyset_load(keyset* keys, const char* fname, int verbose)
 	TiXmlHandle root = doc.FirstChild("document");
 
 	keyset_load_rsakey2048(root.FirstChild("ncsdrsakey"), &keys->ncsdrsakey);
+	keyset_load_rsakey2048(root.FirstChild("ncchrsakey"), &keys->ncchrsakey);
+	keyset_load_rsakey2048(root.FirstChild("ncchdlprsakey"), &keys->ncchdlprsakey);
+	keyset_load_rsakey2048(root.FirstChild("crrrsakey"), &keys->crrrsakey);
 	keyset_load_key128(root.FirstChild("commonkey"), &keys->commonkey);
 
 	return 1;
