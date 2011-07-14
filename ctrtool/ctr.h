@@ -1,7 +1,8 @@
 #ifndef _CTR_H_
 #define _CTR_H_
 
-#include "aes.h"
+#include "polarssl/aes.h"
+#include "polarssl/rsa.h"
 #include "types.h"
 
 
@@ -21,6 +22,7 @@ typedef struct
 	u8 ctr[16];
 	u8 iv[16];
 	aes_context aes;
+	rsa_context rsa;
 }
 ctr_crypto_context;
 
@@ -71,6 +73,8 @@ void		ctr_decrypt_cbc( ctr_crypto_context* ctx,
 							  u8* input,
 							  u8* output,
 							  u32 size );
+
+int			ctr_rsa_key_init( ctr_crypto_context* ctx );
 
 
 #ifdef __cplusplus

@@ -141,3 +141,40 @@ void ctr_decrypt_cbc( ctr_crypto_context* ctx,
 {
 	aes_crypt_cbc(&ctx->aes, AES_DECRYPT, size, ctx->iv, input, output);
 }
+
+
+
+/*
+ * Generate DP, DQ, QP based on private key
+ */ 
+int ctr_rsa_key_init(ctr_crypto_context* ctx )
+{
+    int ret;
+    mpi P1, Q1;
+
+    mpi_init( &P1, &Q1, NULL );
+
+    MPI_CHK( mpi_sub_int( &P1, &ctx->rsa.P, 1 ) );
+    MPI_CHK( mpi_sub_int( &Q1, &ctx->rsa.Q, 1 ) );
+
+	/*
+     * DP = D mod (P - 1)
+     * DQ = D mod (Q - 1)
+     * QP = Q^-1 mod P
+     */
+    MPI_CHK( mpi_mod_mpi( &ctx->rsa.DP, &ctx->rsa.D, &P1 ) );
+    MPI_CHK( mpi_mod_mpi( &ctx->rsa.DQ, &ctx->rsa.D, &Q1 ) );
+    MPI_CHK( mpi_inv_mod( &ctx->rsa.QP, &ctx->rsa.Q, &ctx->rsa.P ) );
+
+cleanup:
+
+    mpi_free(&Q1, &P1, NULL );
+
+    if( ret != 0 )
+    {
+        rsa_free( &ctx->rsa );
+        return( POLARSSL_ERR_RSA_KEY_GEN_FAILED | ret );
+    }
+
+    return( 0 );   
+}

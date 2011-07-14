@@ -5,11 +5,13 @@
 #include "ncch.h"
 #include "utils.h"
 
-void ncch_print(const u8 *blob, u32 offset) {
+
+void ncch_print(const u8 *blob, u32 offset)
+{
 	char magic[5];
 	char productcode[0x11];
-
 	ctr_ncchheader *header = (ctr_ncchheader*)blob;
+
 
 	memcpy(magic, header->magic, 4);
 	magic[4] = 0;
