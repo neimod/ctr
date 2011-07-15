@@ -192,7 +192,6 @@ int exefs_verify(exefs_context* ctx, u32 index, u32 flags)
 
 	ctr_sha_256_finish(&ctx->sha, hash);
 
-	memdump(stdout, "Hash: ", hash, 32);
 	if (memcmp(hash, ctx->header.hashes[7-index], 0x20) == 0)
 		return 1;
 clean:
