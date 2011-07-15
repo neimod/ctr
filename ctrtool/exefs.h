@@ -6,6 +6,8 @@
 #include "ctr.h"
 #include "filepath.h"
 
+
+
 typedef struct
 {
 	u8 name[8];
@@ -18,7 +20,7 @@ typedef struct
 {
 	exefs_sectionheader section[8];
 	u8 reserved[0x80];
-	u8 hashes[0x20 * 8];
+	u8 hashes[8][0x20];
 } exefs_header;
 
 typedef struct
@@ -30,7 +32,9 @@ typedef struct
 	u32 size;
 	exefs_header header;
 	ctr_aes_context aes;
+	ctr_sha256_context sha;
 	filepath dirpath;
+	int hashcheck[8];
 } exefs_context;
 
 void exefs_init(exefs_context* ctx);
@@ -43,5 +47,6 @@ void exefs_set_size(exefs_context* ctx, u32 size);
 void exefs_process(exefs_context* ctx, u32 actions);
 void exefs_print(exefs_context* ctx);
 void exefs_save(exefs_context* ctx, u32 index, u32 flags);
+int exefs_verify(exefs_context* ctx, u32 index, u32 flags);
 
 #endif // _EXEFS_H_

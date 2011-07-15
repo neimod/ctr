@@ -44,6 +44,7 @@ static void usage(const char *argv0)
 		   "  -p, --plain        Extract data without decrypting.\n"
 		   "  -k, --keyset=file  Specify keyset file.\n"
 		   "  -v, --verbose      Give verbose output.\n"
+		   "  -y, --verify       Verify hashes and signatures.\n"
 		   "CXI/CCI options:\n"
 		   "  -n, --ncch=offs    Specify offset for NCCH header.\n"
 		   "  --exefs=file       Specify ExeFS file path.\n"
@@ -102,10 +103,11 @@ int main(int argc, char* argv[])
 			{"keyset", 1, NULL, 'k'},
 			{"ncch", 1, NULL, 'n'},
 			{"verbose", 0, NULL, 'v'},
+			{"verify", 0, NULL, 'y'},
 			{NULL},
 		};
 
-		c = getopt_long(argc, argv, "xivpk:n:", long_options, &option_index);
+		c = getopt_long(argc, argv, "yxivpk:n:", long_options, &option_index);
 		if (c == -1)
 			break;
 
@@ -117,6 +119,10 @@ int main(int argc, char* argv[])
 
 			case 'v':
 				ctx.actions |= VerboseFlag;
+			break;
+
+			case 'y':
+				ctx.actions |= VerifyFlag;
 			break;
 
 			case 'p':
@@ -132,7 +138,6 @@ int main(int argc, char* argv[])
 			break;
 
 			case 'k':
-				//readkeyfile(key, optarg);
 				strncpy(keysetfname, optarg, sizeof(keysetfname));
 			break;
 

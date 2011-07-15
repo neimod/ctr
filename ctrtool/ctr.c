@@ -178,6 +178,25 @@ void ctr_sha_256( const u8* data,
 	sha2(data, size, hash, 0);
 }
 
+void ctr_sha_256_init( ctr_sha256_context* ctx )
+{
+	sha2_starts(&ctx->sha, 0);
+}
+
+void ctr_sha_256_update( ctr_sha256_context* ctx, 
+							    const u8* data,
+								u32 size )
+{
+	sha2_update(&ctx->sha, data, size);
+}
+
+
+void ctr_sha_256_finish( ctr_sha256_context* ctx, 
+							    u8 hash[0x20] )
+{
+	sha2_finish(&ctx->sha, hash);
+}
+
 
 int ctr_rsa_init(ctr_rsa_context* ctx, rsakey2048* key)
 {

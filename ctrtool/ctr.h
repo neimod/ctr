@@ -30,6 +30,11 @@ typedef struct
 	rsa_context rsa;
 } ctr_rsa_context;
 
+typedef struct
+{
+	sha2_context sha;
+} ctr_sha256_context;
+
 
 #ifdef __cplusplus
 extern "C" {
@@ -100,6 +105,16 @@ int			ctr_rsa_public( const u8 signature[0x100],
 void		ctr_sha_256( const u8* data, 
 						 u32 size, 
 						 u8 hash[0x20] );
+
+void		ctr_sha_256_init( ctr_sha256_context* ctx );
+
+void		ctr_sha_256_update( ctr_sha256_context* ctx, 
+							    const u8* data,
+								u32 size );
+
+
+void		ctr_sha_256_finish( ctr_sha256_context* ctx, 
+							    u8 hash[0x20] );
 
 #ifdef __cplusplus
 }

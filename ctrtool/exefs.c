@@ -130,9 +130,15 @@ void exefs_process(exefs_context* ctx, u32 actions)
 	ctr_init_ncch(&ctx->aes, ctx->key, ctx->partitionid, NCCHTYPE_EXEFS);
 	ctr_crypt_counter(&ctx->aes, (u8*)&ctx->header, (u8*)&ctx->header, sizeof(exefs_header));
 
+	if (actions & VerifyFlag)
+	{
+		for(i=0; i<8; i++)
+			ctx->hashcheck[i] = exefs_verify(ctx, i, actions)? 1 : 2;
+	}
+
 	if (actions & InfoFlag)
 	{
-		exefs_print(ctx);	
+		exefs_print(ctx);
 	}
 
 	if (actions & ExtractFlag && ctx->dirpath.valid)
@@ -141,6 +147,56 @@ void exefs_process(exefs_context* ctx, u32 actions)
 		for(i=0; i<8; i++)
 			exefs_save(ctx, i, actions);
 	}
+}
+
+int exefs_verify(exefs_context* ctx, u32 index, u32 flags)
+{
+	exefs_sectionheader* section = (exefs_sectionheader*)(ctx->header.section + index);
+	u32 offset;
+	u32 size;
+	u8 buffer[16 * 1024];
+	u8 hash[0x20];
+	
+
+	offset = getle32(section->offset) + sizeof(exefs_header);
+	size = getle32(section->size);
+
+	if (size == 0)
+		return 0;
+
+	fseek(ctx->file, ctx->offset + offset, SEEK_SET);
+	ctr_init_ncch(&ctx->aes, ctx->key, ctx->partitionid, NCCHTYPE_EXEFS);
+	ctr_add_counter(&ctx->aes, offset / 0x10);
+
+	ctr_sha_256_init(&ctx->sha);
+
+	while(size)
+	{
+		u32 max = sizeof(buffer);
+		if (max > size)
+			max = size;
+
+		if (max != fread(buffer, 1, max, ctx->file))
+		{
+			fprintf(stdout, "Error reading input file\n");
+			goto clean;
+		}
+
+		if (0 == (flags & PlainFlag))
+			ctr_crypt_counter(&ctx->aes, buffer, buffer, max);
+
+		ctr_sha_256_update(&ctx->sha, buffer, max);
+
+		size -= max;
+	}	
+
+	ctr_sha_256_finish(&ctx->sha, hash);
+
+	memdump(stdout, "Hash: ", hash, 32);
+	if (memcmp(hash, ctx->header.hashes[7-index], 0x20) == 0)
+		return 1;
+clean:
+	return 0;
 }
 
 void exefs_print(exefs_context* ctx)
@@ -167,6 +223,12 @@ void exefs_print(exefs_context* ctx)
 			fprintf(stdout, "Section name:           %s\n", sectname);
 			fprintf(stdout, "Section offset:         0x%08x\n", sectoffset + 0x200);
 			fprintf(stdout, "Section size:           0x%08x\n", sectsize);
+			if (ctx->hashcheck[i] == HashGood)
+				memdump(stdout, "Section hash (GOOD):    ", ctx->header.hashes[7-i], 0x20);
+			else if (ctx->hashcheck[i] == HashFail)
+				memdump(stdout, "Section hash (FAIL):    ", ctx->header.hashes[7-i], 0x20);
+			else
+				memdump(stdout, "Section hash:           ", ctx->header.hashes[7-i], 0x20);
 		}
 	}
 }

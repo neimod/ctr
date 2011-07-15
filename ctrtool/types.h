@@ -15,6 +15,14 @@ enum flags
 	InfoFlag = (1<<1),
 	PlainFlag = (1<<2),
 	VerboseFlag = (1<<3),
+	VerifyFlag = (1<<4),
+};
+
+enum hashstate
+{
+	HashUnchecked = 0,
+	HashGood,
+	HashFail
 };
 
 #endif
