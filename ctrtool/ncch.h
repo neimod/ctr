@@ -67,6 +67,8 @@ typedef struct
 	rsakey2048 nccholdrsakey;
 	rsakey2048 ncchdlprsakey;
 	rsakey2048 crrrsakey;
+	u8 exefshash[0x20];
+	int exefshashcheck;
 } ncch_context;
 
 void ncch_init(ncch_context* ctx);

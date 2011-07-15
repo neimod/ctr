@@ -44,6 +44,8 @@ void exefs_set_key(exefs_context* ctx, u8 key[16]);
 void exefs_set_dirpath(exefs_context* ctx, const char* path);
 void exefs_set_partitionid(exefs_context* ctx, u8 partitionid[8]);
 void exefs_set_size(exefs_context* ctx, u32 size);
+void exefs_read_header(exefs_context* ctx);
+void exefs_calculate_hash(exefs_context* ctx, u8 hash[32]);
 void exefs_process(exefs_context* ctx, u32 actions);
 void exefs_print(exefs_context* ctx);
 void exefs_save(exefs_context* ctx, u32 index, u32 flags);

@@ -158,6 +158,30 @@ void ncch_process(ncch_context* ctx, u32 actions)
 	fseek(ctx->file, ctx->offset, SEEK_SET);
 	fread(&ctx->header, 1, 0x200, ctx->file);
 
+	exheader_set_file(&ctx->exheader, ctx->file);
+	exheader_set_offset(&ctx->exheader, ncch_get_exheader_offset(ctx) );
+	exheader_set_size(&ctx->exheader, ncch_get_exheader_size(ctx) );
+	exheader_set_key(&ctx->exheader, ctx->key);
+	exheader_set_partitionid(&ctx->exheader, ctx->header.partitionid);
+	exheader_set_programid(&ctx->exheader, ctx->header.programid);
+
+	exefs_set_file(&ctx->exefs, ctx->file);
+	exefs_set_offset(&ctx->exefs, ncch_get_exefs_offset(ctx) );
+	exefs_set_size(&ctx->exefs, ncch_get_exefs_size(ctx) );
+	exefs_set_key(&ctx->exefs, ctx->key);
+	exefs_set_partitionid(&ctx->exefs, ctx->header.partitionid);
+
+	exefs_read_header(&ctx->exefs);
+
+	if (actions & VerifyFlag)
+	{
+		exefs_calculate_hash(&ctx->exefs, ctx->exefshash);
+		if (0 == memcmp(ctx->exefshash, ctx->header.exefssuperblockhash, 0x20))
+			ctx->exefshashcheck = HashGood;
+		else
+			ctx->exefshashcheck = HashFail;
+	}
+
 	if (actions & InfoFlag)
 	{
 		ncch_print(ctx);		
@@ -172,20 +196,9 @@ void ncch_process(ncch_context* ctx, u32 actions)
 		ncch_save(ctx, NCCHTYPE_EXTHEADER, actions);
 	}
 
-	exheader_set_file(&ctx->exheader, ctx->file);
-	exheader_set_offset(&ctx->exheader, ncch_get_exheader_offset(ctx) );
-	exheader_set_size(&ctx->exheader, ncch_get_exheader_size(ctx) );
-	exheader_set_key(&ctx->exheader, ctx->key);
-	exheader_set_partitionid(&ctx->exheader, ctx->header.partitionid);
-	exheader_set_programid(&ctx->exheader, ctx->header.programid);
 
 	if (exheader_process(&ctx->exheader, actions))
 	{
-		exefs_set_file(&ctx->exefs, ctx->file);
-		exefs_set_offset(&ctx->exefs, ncch_get_exefs_offset(ctx) );
-		exefs_set_size(&ctx->exefs, ncch_get_exefs_size(ctx) );
-		exefs_set_key(&ctx->exefs, ctx->key);
-		exefs_set_partitionid(&ctx->exefs, ctx->header.partitionid);
 		exefs_process(&ctx->exefs, actions);
 	}
 
@@ -283,8 +296,13 @@ void ncch_print(ncch_context* ctx)
 	fprintf(stdout, "RomFS offset:           0x%08x\n", getle32(header->romfssize)? offset+getle32(header->romfsoffset)*0x200 : 0);
 	fprintf(stdout, "RomFS size:             0x%08x\n", getle32(header->romfssize)*0x200);
 	fprintf(stdout, "RomFS hash region size: 0x%08x\n", getle32(header->romfshashregionsize)*0x200);
-	memdump(stdout, "ExeFS Superblock Hash:  ", header->exefssuperblockhash, 0x20);
-	memdump(stdout, "RomFS Superblock Hash:  ", header->romfssuperblockhash, 0x20);
+	if (ctx->exefshashcheck == HashUnchecked)
+		memdump(stdout, "ExeFS Hash:             ", header->exefssuperblockhash, 0x20);
+	else if (ctx->exefshashcheck == HashGood)
+		memdump(stdout, "ExeFS Hash (GOOD):      ", header->exefssuperblockhash, 0x20);
+	else
+		memdump(stdout, "ExeFS Hash (FAIL):      ", header->exefssuperblockhash, 0x20);
+	memdump(stdout, "RomFS Hash:             ", header->romfssuperblockhash, 0x20);
 
 	if (ncch_get_exefs_size(ctx))
 	{

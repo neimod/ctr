@@ -119,19 +119,29 @@ clean:
 	return;
 }
 
-void exefs_process(exefs_context* ctx, u32 actions)
+void exefs_read_header(exefs_context* ctx)
 {
-	u32 i;
-
-
 	fseek(ctx->file, ctx->offset, SEEK_SET);
 	fread(&ctx->header, 1, sizeof(exefs_header), ctx->file);
 
 	ctr_init_ncch(&ctx->aes, ctx->key, ctx->partitionid, NCCHTYPE_EXEFS);
 	ctr_crypt_counter(&ctx->aes, (u8*)&ctx->header, (u8*)&ctx->header, sizeof(exefs_header));
+}
+
+void exefs_calculate_hash(exefs_context* ctx, u8 hash[32])
+{
+	ctr_sha_256((const u8*)&ctx->header, sizeof(exefs_header), hash);
+}
+
+void exefs_process(exefs_context* ctx, u32 actions)
+{
+	u32 i;
+
+	exefs_read_header(ctx);
+
 
 	if (actions & VerifyFlag)
-	{
+	{	
 		for(i=0; i<8; i++)
 			ctx->hashcheck[i] = exefs_verify(ctx, i, actions)? HashGood : HashFail;
 	}
