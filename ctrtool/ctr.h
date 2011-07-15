@@ -23,62 +23,71 @@ typedef struct
 	u8 ctr[16];
 	u8 iv[16];
 	aes_context aes;
+} ctr_aes_context;
+
+typedef struct
+{
 	rsa_context rsa;
-}
-ctr_crypto_context;
+} ctr_rsa_context;
 
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-void		ctr_set_iv( ctr_crypto_context* ctx, 
+void		ctr_set_iv( ctr_aes_context* ctx, 
 						 u8 iv[16] );
 
-void		ctr_add_counter( ctr_crypto_context* ctx,
-						 u8 carry );
+void		ctr_add_counter( ctr_aes_context* ctx,
+						     u32 carry );
 
-void		ctr_set_counter( ctr_crypto_context* ctx, 
+void		ctr_set_counter( ctr_aes_context* ctx, 
 						 u8 ctr[16] );
 
 
-void		ctr_init_counter( ctr_crypto_context* ctx, 
+void		ctr_init_counter( ctr_aes_context* ctx, 
 						  u8 key[16], 
 						  u8 ctr[12] );
 
-void		ctr_crypt_counter_block( ctr_crypto_context* ctx, 
+void        ctr_init_ncch( ctr_aes_context* ctx,
+							   u8 key[16],
+							   u8 partitionid[8],
+							   u8 type );
+
+
+void		ctr_crypt_counter_block( ctr_aes_context* ctx, 
 								     u8 input[16], 
 								     u8 output[16] );
 
 
-void		ctr_crypt_counter( ctr_crypto_context* ctx, 
+void		ctr_crypt_counter( ctr_aes_context* ctx, 
 							   u8* input, 
 							   u8* output,
 							   u32 size );
 
 
-void		ctr_init_cbc_encrypt( ctr_crypto_context* ctx,
+void		ctr_init_cbc_encrypt( ctr_aes_context* ctx,
 							   u8 key[16],
 							   u8 iv[16] );
 
-void		ctr_init_cbc_decrypt( ctr_crypto_context* ctx,
+void		ctr_init_cbc_decrypt( ctr_aes_context* ctx,
 							   u8 key[16],
 							   u8 iv[16] );
 
-void		ctr_encrypt_cbc( ctr_crypto_context* ctx, 
+void		ctr_encrypt_cbc( ctr_aes_context* ctx, 
 							  u8* input,
 							  u8* output,
 							  u32 size );
 
-void		ctr_decrypt_cbc( ctr_crypto_context* ctx, 
+void		ctr_decrypt_cbc( ctr_aes_context* ctx, 
 							  u8* input,
 							  u8* output,
 							  u32 size );
 
-int			ctr_rsa_init( ctr_crypto_context* ctx, 
+int			ctr_rsa_init( ctr_rsa_context* ctx, 
 						  rsakey2048* key );
 
-void		ctr_rsa_free( ctr_crypto_context* ctx );
+void		ctr_rsa_free( ctr_rsa_context* ctx );
 
 int			ctr_rsa_verify_hash( const u8 signature[0x100], 
 								 const u8 hash[0x20], 

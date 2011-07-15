@@ -3,6 +3,7 @@
 
 #include "types.h"
 
+
 #ifndef MAX_PATH
 	#define MAX_PATH 255
 #endif
@@ -23,6 +24,8 @@ void readkeyfile(u8* key, const char* keyfname);
 void memdump(FILE* fout, const char* prefix, const u8* data, u32 size);
 void hexdump(void *ptr, int buflen);
 int key_load(char *name, u8 *out_buf);
+
+int makedir(const char* dir);
 
 #ifdef __cplusplus
 }

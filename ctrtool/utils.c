@@ -1,6 +1,11 @@
+
 #include <stdio.h>
 #include <string.h>
 #include "utils.h"
+
+#ifdef _WIN32
+#include <direct.h>
+#endif
 
 
 u32 align(u32 offset, u32 alignment)
@@ -177,4 +182,14 @@ int key_load(char *name, u8 *out_buf) {
 	fclose(f);
 
 	return 0;
+}
+
+
+int makedir(const char* dir)
+{
+#ifdef _WIN32
+	return _mkdir(dir);
+#else
+#error pls define mkdir
+#endif
 }

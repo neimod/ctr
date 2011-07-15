@@ -5,9 +5,46 @@
 #include "tmd.h"
 #include "utils.h"
 
-void tmd_print(const u8* blob, u32 size)
+
+void tmd_init(tmd_context* ctx)
 {
-	unsigned int type = getbe32(blob);
+	memset(ctx, 0, sizeof(tmd_context));
+}
+
+void tmd_set_file(tmd_context* ctx, FILE* file)
+{
+	ctx->file = file;
+}
+
+void tmd_set_offset(tmd_context* ctx, u32 offset)
+{
+	ctx->offset = offset;
+}
+
+void tmd_set_size(tmd_context* ctx, u32 size)
+{
+	ctx->size = size;
+}
+
+void tmd_process(tmd_context* ctx, u32 actions)
+{
+	ctx->buffer = malloc(ctx->size);
+
+	fseek(ctx->file, ctx->offset, SEEK_SET);
+	fread(ctx->buffer, 1, ctx->size, ctx->file);
+
+
+	if (actions & InfoFlag)
+	{
+		tmd_print(ctx); 
+	}
+
+	free(ctx->buffer);
+}
+
+void tmd_print(tmd_context* ctx)
+{
+	unsigned int type = getbe32(ctx->buffer);
 	ctr_tmd_header_4096* header4096 = 0;
 	ctr_tmd_header_2048* header2048 = 0;
 	ctr_tmd_body* body = 0;
@@ -16,18 +53,18 @@ void tmd_print(const u8* blob, u32 size)
 
 	if (type == TMD_RSA_2048_SHA256 || TMD_RSA_2048_SHA1)
 	{
-		header2048 = (ctr_tmd_header_2048*)blob;
-		body = (ctr_tmd_body*)(blob + sizeof(ctr_tmd_header_2048));
+		header2048 = (ctr_tmd_header_2048*)ctx->buffer;
+		body = (ctr_tmd_body*)(ctx->buffer + sizeof(ctr_tmd_header_2048));
 	}
 	else if (type == TMD_RSA_4096_SHA256 || type == TMD_RSA_4096_SHA1)
 	{
-		header4096 = (ctr_tmd_header_4096*)blob;
-		body = (ctr_tmd_body*)(blob + sizeof(ctr_tmd_header_4096));
+		header4096 = (ctr_tmd_header_4096*)ctx->buffer;
+		body = (ctr_tmd_body*)(ctx->buffer + sizeof(ctr_tmd_header_4096));
 	}
 
 	contentcount = getbe16(body->contentcount);
 
-	fprintf(stdout, "---TMD header---\n");
+	fprintf(stdout, "TMD header:\n");
 	fprintf(stdout, "Issuer:                 %s\n", body->issuer);
 	fprintf(stdout, "Version:                %d\n", body->version);
 	fprintf(stdout, "CA CRL version:         %d\n", body->ca_crl_version);
@@ -41,7 +78,7 @@ void tmd_print(const u8* blob, u32 size)
 	fprintf(stdout, "Content count:          %04x\n", getbe16(body->contentcount));
 	fprintf(stdout, "Boot content:           %04x\n", getbe16(body->bootcontent));
 	memdump(stdout, "Hash:                   ", body->hash, 32);
-	fprintf(stdout, "---TMD content info---\n");
+	fprintf(stdout, "TMD content info:\n");
 	for(i=0; i<64; i++)
 	{
 		ctr_tmd_contentinfo* info = (ctr_tmd_contentinfo*)(body->contentinfo + 36*i);
@@ -54,7 +91,7 @@ void tmd_print(const u8* blob, u32 size)
 		fprintf(stdout, "Command count:          %04x\n", getbe16(info->commandcount));
 		memdump(stdout, "Unknown:                ", info->unk, 32);
 	}
-	fprintf(stdout, "---TMD contents---\n");
+	fprintf(stdout, "TMD contents:\n");
 	for(i=0; i<contentcount; i++)
 	{
 		ctr_tmd_contentchunk* chunk = (ctr_tmd_contentchunk*)(body->contentinfo + 36*64 + i*48);

@@ -2,6 +2,9 @@
 #define _EXEFS_H_
 
 #include "types.h"
+#include "info.h"
+#include "ctr.h"
+#include "filepath.h"
 
 typedef struct
 {
@@ -16,9 +19,29 @@ typedef struct
 	exefs_sectionheader section[8];
 	u8 reserved[0x80];
 	u8 hashes[0x20 * 8];
-} exefs_superblock;
+} exefs_header;
 
-void exefs_print(const u8 *blob, u32 size);
+typedef struct
+{
+	FILE* file;
+	u8 key[16];
+	u8 partitionid[8];
+	u32 offset;
+	u32 size;
+	exefs_header header;
+	ctr_aes_context aes;
+	filepath dirpath;
+} exefs_context;
 
+void exefs_init(exefs_context* ctx);
+void exefs_set_file(exefs_context* ctx, FILE* file);
+void exefs_set_offset(exefs_context* ctx, u32 offset);
+void exefs_set_key(exefs_context* ctx, u8 key[16]);
+void exefs_set_dirpath(exefs_context* ctx, const char* path);
+void exefs_set_partitionid(exefs_context* ctx, u8 partitionid[8]);
+void exefs_set_size(exefs_context* ctx, u32 size);
+void exefs_process(exefs_context* ctx, u32 actions);
+void exefs_print(exefs_context* ctx);
+void exefs_save(exefs_context* ctx, u32 index, u32 flags);
 
 #endif // _EXEFS_H_

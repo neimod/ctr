@@ -65,12 +65,26 @@ typedef struct
 	unsigned char signature[512];
 } ctr_tmd_header_4096;
 
+typedef struct
+{
+	FILE* file;
+	u32 offset;
+	u32 size;
+	u8* buffer;
+} tmd_context;
+
+
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-void		tmd_print(const u8* blob, u32 size);
+void tmd_init(tmd_context* ctx);
+void tmd_set_file(tmd_context* ctx, FILE* file);
+void tmd_set_offset(tmd_context* ctx, u32 offset);
+void tmd_set_size(tmd_context* ctx, u32 size);
+void tmd_print(tmd_context* ctx);
+void tmd_process(tmd_context* ctx, u32 actions);
 
 #ifdef __cplusplus
 }

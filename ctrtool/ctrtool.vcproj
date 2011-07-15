@@ -186,6 +186,14 @@
 				>
 			</File>
 			<File
+				RelativePath=".\exheader.c"
+				>
+			</File>
+			<File
+				RelativePath=".\filepath.c"
+				>
+			</File>
+			<File
 				RelativePath=".\windows\getopt.c"
 				>
 			</File>
@@ -280,7 +288,19 @@
 				>
 			</File>
 			<File
+				RelativePath=".\exheader.h"
+				>
+			</File>
+			<File
+				RelativePath=".\filepath.h"
+				>
+			</File>
+			<File
 				RelativePath=".\windows\getopt.h"
+				>
+			</File>
+			<File
+				RelativePath=".\info.h"
 				>
 			</File>
 			<File

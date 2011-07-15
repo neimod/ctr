@@ -3,13 +3,17 @@
 
 #include "types.h"
 #include "keyset.h"
+#include "ctr.h"
 
-typedef struct {
+
+typedef struct 
+{
 	u32 enable_timelimit;
 	u32 timelimit_seconds;
 } timelimit_entry;
 
-typedef struct {
+typedef struct 
+{
 	u32 sig_type;
 	u8  signature[0x100];
 	u8  padding1[0x3c];
@@ -34,7 +38,28 @@ typedef struct {
 	timelimit_entry timelimits[8];	
 } eticket;
 
-int  tik_decrypt_titlekey(keyset* keys, const u8* tikblob, u8* decryptedkey);
-void tik_print(keyset* keys, const u8 *blob, u32 size);
+typedef struct
+{
+	FILE* file;
+	u32 offset;
+	u32 size;
+	u8 key[16];
+	int keyvalid;
+	u8 titlekey[16];
+	eticket tik;
+	ctr_aes_context aes;
+} tik_context;
+
+void tik_init(tik_context* ctx);
+void tik_set_file(tik_context* ctx, FILE* file);
+void tik_set_offset(tik_context* ctx, u32 offset);
+void tik_set_size(tik_context* ctx, u32 size);
+void tik_set_commonkey(tik_context* ctx, u8 key[16]);
+void tik_get_decrypted_titlekey(tik_context* ctx, u8 decryptedkey[0x10]);
+void tik_get_titleid(tik_context* ctx, u8 titleid[8]);
+void tik_get_iv(tik_context* ctx, u8 iv[0x10]);
+void tik_decrypt_titlekey(tik_context* ctx, u8 decryptedkey[0x10]);
+void tik_print(tik_context* ctx);
+void tik_process(tik_context* ctx, u32 actions);
 
 #endif

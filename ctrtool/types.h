@@ -8,4 +8,13 @@ typedef unsigned short		u16;
 typedef unsigned int		u32;
 typedef unsigned long long	u64;
 
+
+enum flags
+{
+	ExtractFlag = (1<<0),
+	InfoFlag = (1<<1),
+	PlainFlag = (1<<2),
+	VerboseFlag = (1<<3),
+};
+
 #endif

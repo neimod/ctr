@@ -1,8 +1,13 @@
-#ifndef __NCCH_H__
-#define __NCCH_H__
+#ifndef _NCCH_H_
+#define _NCCH_H_
 
+#include <stdio.h>
 #include "types.h"
 #include "keyset.h"
+#include "filepath.h"
+#include "ctr.h"
+#include "exefs.h"
+#include "exheader.h"
 
 
 typedef enum
@@ -44,6 +49,44 @@ typedef struct
 	u8 romfssuperblockhash[0x20];
 } ctr_ncchheader;
 
-void ncch_print(const u8 *blob, u32 size, u32 offset, keyset* keys);
 
-#endif
+typedef struct
+{
+	FILE* file;
+	u8 key[16];
+	u32 offset;
+	filepath exefspath;
+	filepath romfspath;
+	filepath exheaderpath;
+	ctr_ncchheader header;
+	ctr_aes_context aes;
+	exefs_context exefs;
+	exheader_context exheader;
+	rsakey2048 ncsdrsakey;
+	rsakey2048 ncchrsakey;
+	rsakey2048 nccholdrsakey;
+	rsakey2048 ncchdlprsakey;
+	rsakey2048 crrrsakey;
+} ncch_context;
+
+void ncch_init(ncch_context* ctx);
+void ncch_process(ncch_context* ctx, u32 actions);
+void ncch_set_offset(ncch_context* ctx, u32 ncchoffset);
+void ncch_set_file(ncch_context* ctx, FILE* file);
+void ncch_load_keys(ncch_context* ctx, keyset* keys);
+void ncch_set_key(ncch_context* ctx, u8 key[16]);
+void ncch_set_exefspath(ncch_context* ctx, const char* path);
+void ncch_set_exefsdirpath(ncch_context* ctx, const char* path);
+void ncch_set_romfspath(ncch_context* ctx, const char* path);
+void ncch_set_exheaderpath(ncch_context* ctx, const char* path);
+u32 ncch_get_exefs_offset(ncch_context* ctx);
+u32 ncch_get_exefs_size(ncch_context* ctx);
+u32 ncch_get_romfs_offset(ncch_context* ctx);
+u32 ncch_get_romfs_size(ncch_context* ctx);
+u32 ncch_get_exheader_offset(ncch_context* ctx);
+u32 ncch_get_exheader_size(ncch_context* ctx);
+void ncch_print(ncch_context* ctx);
+int ncch_signature_verify(const ctr_ncchheader* header, rsakey2048* key);
+void ncch_save(ncch_context* ctx, u32 type, u32 flags);
+
+#endif // _NCCH_H_
