@@ -133,7 +133,7 @@ void exefs_process(exefs_context* ctx, u32 actions)
 	if (actions & VerifyFlag)
 	{
 		for(i=0; i<8; i++)
-			ctx->hashcheck[i] = exefs_verify(ctx, i, actions)? 1 : 2;
+			ctx->hashcheck[i] = exefs_verify(ctx, i, actions)? HashGood : HashFail;
 	}
 
 	if (actions & InfoFlag)
