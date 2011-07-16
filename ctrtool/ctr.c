@@ -178,6 +178,20 @@ void ctr_sha_256( const u8* data,
 	sha2(data, size, hash, 0);
 }
 
+int ctr_sha_256_verify( const u8* data, 
+				  u32 size, 
+				  const u8 checkhash[0x20] )
+{
+	u8 hash[0x20];
+
+	sha2(data, size, hash, 0);
+
+	if (memcmp(hash, checkhash, 0x20) == 0)
+		return HashGood;
+	else
+		return HashFail;
+}
+
 void ctr_sha_256_init( ctr_sha256_context* ctx )
 {
 	sha2_starts(&ctx->sha, 0);

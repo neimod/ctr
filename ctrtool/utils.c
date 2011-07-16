@@ -159,6 +159,7 @@ void memdump(FILE* fout, const char* prefix, const u8* data, u32 size)
 	}
 }
 
+
 int key_load(char *name, u8 *out_buf) {
 	//char path[MAX_PATH];
 	FILE *f;

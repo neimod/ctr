@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include <string.h>
-
+#include <stdlib.h>
 #include "types.h"
 #include "ncch.h"
 #include "utils.h"
@@ -60,13 +60,11 @@ void ncch_set_exheaderpath(ncch_context* ctx, const char* path)
 	filepath_set(&ctx->exheaderpath, path);
 }
 
-void ncch_save(ncch_context* ctx, u32 type, u32 flags)
+
+int ncch_extract_prepare(ncch_context* ctx, u32 type, u32 flags)
 {
-	FILE* fout = 0;
 	u32 offset = 0;
 	u32 size = 0;
-	filepath* path = 0;
-	u8 buffer[16*1024];
 
 
 	switch(type)
@@ -75,7 +73,6 @@ void ncch_save(ncch_context* ctx, u32 type, u32 flags)
 		{
 			offset = ncch_get_exefs_offset(ctx);
 			size = ncch_get_exefs_size(ctx);
-			path = &ctx->exefspath;
 		}
 		break;
 
@@ -83,15 +80,13 @@ void ncch_save(ncch_context* ctx, u32 type, u32 flags)
 		{
 			offset = ncch_get_romfs_offset(ctx);
 			size = ncch_get_romfs_size(ctx);
-			path = &ctx->romfspath;
 		}
 		break;
 
-		case NCCHTYPE_EXTHEADER:
+		case NCCHTYPE_EXHEADER:
 		{
 			offset = ncch_get_exheader_offset(ctx);
 			size = ncch_get_exheader_size(ctx);
-			path = &ctx->exheaderpath;
 		}
 		break;
 	
@@ -101,6 +96,63 @@ void ncch_save(ncch_context* ctx, u32 type, u32 flags)
 			goto clean;
 		}
 		break;
+	}
+
+	ctx->extractsize = size;
+	ctx->extractflags = flags;
+	fseek(ctx->file, offset, SEEK_SET);
+	ctr_init_ncch(&ctx->aes, ctx->key, ctx->header.partitionid, type);
+
+	return 1;
+
+clean:
+	return 0;
+}
+
+int ncch_extract_buffer(ncch_context* ctx, u8* buffer, u32 buffersize, u32* outsize)
+{
+	u32 max = buffersize;
+
+	if (max > ctx->extractsize)
+		max = ctx->extractsize;
+
+	*outsize = max;
+
+	if (ctx->extractsize)
+	{
+		if (max != fread(buffer, 1, max, ctx->file))
+		{
+			fprintf(stdout, "Error reading input file\n");
+			goto clean;
+		}
+
+		if (0 == (ctx->extractflags & PlainFlag))
+			ctr_crypt_counter(&ctx->aes, buffer, buffer, max);
+
+		ctx->extractsize -= max;
+	}
+
+	return 1;
+
+clean:
+	return 0;
+}
+
+void ncch_save(ncch_context* ctx, u32 type, u32 flags)
+{
+	FILE* fout = 0;
+	filepath* path = 0;
+	u8 buffer[16*1024];
+
+
+	if (0 == ncch_extract_prepare(ctx, type, flags))
+		goto clean;
+
+	switch(type)
+	{	
+		case NCCHTYPE_EXEFS: path = &ctx->exefspath; break;
+		case NCCHTYPE_ROMFS: path = &ctx->romfspath; break;
+		case NCCHTYPE_EXHEADER: path = &ctx->exheaderpath; break;
 	}
 
 	if (path == 0 || path->valid == 0)
@@ -113,43 +165,65 @@ void ncch_save(ncch_context* ctx, u32 type, u32 flags)
 		goto clean;
 	}
 
-	fseek(ctx->file, offset, SEEK_SET);
-
-	ctr_init_ncch(&ctx->aes, ctx->key, ctx->header.partitionid, type);
-
 	switch(type)
 	{
 		case NCCHTYPE_EXEFS: fprintf(stdout, "Saving ExeFS...\n"); break;
 		case NCCHTYPE_ROMFS: fprintf(stdout, "Saving RomFS...\n"); break;
-		case NCCHTYPE_EXTHEADER: fprintf(stdout, "Saving Extended Header...\n"); break;
+		case NCCHTYPE_EXHEADER: fprintf(stdout, "Saving Extended Header...\n"); break;
 	}
 
-	while(size)
+	while(1)
 	{
-		u32 max = sizeof(buffer);
-		if (max > size)
-			max = size;
+		u32 max;
 
-		if (max != fread(buffer, 1, max, ctx->file))
-		{
-			fprintf(stdout, "Error reading input file\n");
+		if (0 == ncch_extract_buffer(ctx, buffer, sizeof(buffer), &max))
 			goto clean;
-		}
 
-		if (0 == (flags & PlainFlag))
-			ctr_crypt_counter(&ctx->aes, buffer, buffer, max);
+		if (max == 0)
+			break;
 
 		if (max != fwrite(buffer, 1, max, fout))
 		{
 			fprintf(stdout, "Error writing output file\n");
 			goto clean;
 		}
-
-		size -= max;
 	}
 clean:
 	if (fout)
 		fclose(fout);
+	return;
+}
+
+void ncch_verify_hashes(ncch_context* ctx, u32 flags)
+{
+	u32 exefshashregionsize = getle32(ctx->header.exefshashregionsize) * 0x200;
+	u32 romfshashregionsize = getle32(ctx->header.exefshashregionsize) * 0x200;
+	u32 exheaderhashregionsize = getle32(ctx->header.extendedheadersize) * 0x200;
+	u8* exefshashregion = malloc(exefshashregionsize);
+	u8* romfshashregion = malloc(romfshashregionsize);
+	u8* exheaderhashregion = malloc(exheaderhashregionsize);
+
+	if (0 == ncch_extract_prepare(ctx, NCCHTYPE_EXEFS, flags))
+		goto clean;
+	if (0 == ncch_extract_buffer(ctx, exefshashregion, exefshashregionsize, &exefshashregionsize))
+		goto clean;
+	if (0 == ncch_extract_prepare(ctx, NCCHTYPE_ROMFS, flags))
+		goto clean;
+	if (0 == ncch_extract_buffer(ctx, romfshashregion, romfshashregionsize, &romfshashregionsize))
+		goto clean;
+	if (0 == ncch_extract_prepare(ctx, NCCHTYPE_EXHEADER, flags))
+		goto clean;
+	if (0 == ncch_extract_buffer(ctx, exheaderhashregion, exheaderhashregionsize, &exheaderhashregionsize))
+		goto clean;
+
+	ctx->exefshashcheck = ctr_sha_256_verify(exefshashregion, exefshashregionsize, ctx->header.exefssuperblockhash);
+	ctx->romfshashcheck = ctr_sha_256_verify(romfshashregion, romfshashregionsize, ctx->header.romfssuperblockhash);
+	ctx->exheaderhashcheck = ctr_sha_256_verify(exheaderhashregion, exheaderhashregionsize, ctx->header.extendedheaderhash);
+
+	free(exefshashregion);
+	free(romfshashregion);
+	free(exheaderhashregion);
+clean:
 	return;
 }
 
@@ -171,29 +245,17 @@ void ncch_process(ncch_context* ctx, u32 actions)
 	exefs_set_key(&ctx->exefs, ctx->key);
 	exefs_set_partitionid(&ctx->exefs, ctx->header.partitionid);
 
-	exefs_read_header(&ctx->exefs);
-
 	if (actions & VerifyFlag)
-	{
-		exefs_calculate_hash(&ctx->exefs, ctx->exefshash);
-		if (0 == memcmp(ctx->exefshash, ctx->header.exefssuperblockhash, 0x20))
-			ctx->exefshashcheck = HashGood;
-		else
-			ctx->exefshashcheck = HashFail;
-	}
+		ncch_verify_hashes(ctx, actions);
 
 	if (actions & InfoFlag)
-	{
 		ncch_print(ctx);		
-	}
-
-
 
 	if (actions & ExtractFlag)
 	{
 		ncch_save(ctx, NCCHTYPE_EXEFS, actions);
 		ncch_save(ctx, NCCHTYPE_ROMFS, actions);
-		ncch_save(ctx, NCCHTYPE_EXTHEADER, actions);
+		ncch_save(ctx, NCCHTYPE_EXHEADER, actions);
 	}
 
 
@@ -201,7 +263,6 @@ void ncch_process(ncch_context* ctx, u32 actions)
 	{
 		exefs_process(&ctx->exefs, actions);
 	}
-
 }
 
 int ncch_signature_verify(const ctr_ncchheader* header, rsakey2048* key)
@@ -285,8 +346,13 @@ void ncch_print(ncch_context* ctx)
 	fprintf(stdout, "Program id:             %016llx\n", getle64(header->programid));
 	fprintf(stdout, "Temp flag:              %02x\n", header->tempflag);
 	fprintf(stdout, "Product code:           %s\n", productcode);
-	memdump(stdout, "Extended header hash:   ", header->extendedheaderhash, 0x20);
-	fprintf(stdout, "Extended header size:   %08x\n", getle32(header->extendedheadersize));
+	fprintf(stdout, "Exheader size:          %08x\n", getle32(header->extendedheadersize));
+	if (ctx->exheaderhashcheck == HashUnchecked)
+		memdump(stdout, "Exheader hash:          ", header->extendedheaderhash, 0x20);
+	else if (ctx->exheaderhashcheck == HashGood)
+		memdump(stdout, "Exheader hash (GOOD):   ", header->extendedheaderhash, 0x20);
+	else
+		memdump(stdout, "Exheader hash (FAIL):   ", header->extendedheaderhash, 0x20);
 	fprintf(stdout, "Flags:                  %016llx\n", getle64(header->flags));
 	fprintf(stdout, "Plain region offset:    0x%08x\n", getle32(header->plainregionsize)? offset+getle32(header->plainregionoffset)*0x200 : 0);
 	fprintf(stdout, "Plain region size:      0x%08x\n", getle32(header->plainregionsize)*0x200);
@@ -302,9 +368,10 @@ void ncch_print(ncch_context* ctx)
 		memdump(stdout, "ExeFS Hash (GOOD):      ", header->exefssuperblockhash, 0x20);
 	else
 		memdump(stdout, "ExeFS Hash (FAIL):      ", header->exefssuperblockhash, 0x20);
-	memdump(stdout, "RomFS Hash:             ", header->romfssuperblockhash, 0x20);
-
-	if (ncch_get_exefs_size(ctx))
-	{
-	}
+	if (ctx->romfshashcheck == HashUnchecked)
+		memdump(stdout, "RomFS Hash:             ", header->romfssuperblockhash, 0x20);
+	else if (ctx->romfshashcheck == HashGood)
+		memdump(stdout, "RomFS Hash (GOOD):      ", header->romfssuperblockhash, 0x20);
+	else
+		memdump(stdout, "RomFS Hash (FAIL):      ", header->romfssuperblockhash, 0x20);
 }

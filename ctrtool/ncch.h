@@ -12,7 +12,7 @@
 
 typedef enum
 {
-	NCCHTYPE_EXTHEADER = 1,
+	NCCHTYPE_EXHEADER = 1,
 	NCCHTYPE_EXEFS = 2,
 	NCCHTYPE_ROMFS = 3,
 } ctr_ncchtypes;
@@ -67,8 +67,11 @@ typedef struct
 	rsakey2048 nccholdrsakey;
 	rsakey2048 ncchdlprsakey;
 	rsakey2048 crrrsakey;
-	u8 exefshash[0x20];
 	int exefshashcheck;
+	int romfshashcheck;
+	int exheaderhashcheck;
+	u32 extractsize;
+	u32 extractflags;
 } ncch_context;
 
 void ncch_init(ncch_context* ctx);
@@ -89,6 +92,8 @@ u32 ncch_get_exheader_offset(ncch_context* ctx);
 u32 ncch_get_exheader_size(ncch_context* ctx);
 void ncch_print(ncch_context* ctx);
 int ncch_signature_verify(const ctr_ncchheader* header, rsakey2048* key);
+void ncch_verify_hashes(ncch_context* ctx, u32 flags);
 void ncch_save(ncch_context* ctx, u32 type, u32 flags);
-
+int ncch_extract_prepare(ncch_context* ctx, u32 type, u32 flags);
+int ncch_extract_buffer(ncch_context* ctx, u8* buffer, u32 buffersize, u32* outsize);
 #endif // _NCCH_H_

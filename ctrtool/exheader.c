@@ -47,7 +47,7 @@ int exheader_process(exheader_context* ctx, u32 actions)
 	fseek(ctx->file, ctx->offset, SEEK_SET);
 	fread(&ctx->header, 1, sizeof(exheader_header), ctx->file);
 
-	ctr_init_ncch(&ctx->aes, ctx->key, ctx->partitionid, NCCHTYPE_EXTHEADER);
+	ctr_init_ncch(&ctx->aes, ctx->key, ctx->partitionid, NCCHTYPE_EXHEADER);
 	ctr_crypt_counter(&ctx->aes, (u8*)&ctx->header, (u8*)&ctx->header, sizeof(exheader_header));
 
 	if (memcmp(ctx->header.programid, ctx->programid, 8))

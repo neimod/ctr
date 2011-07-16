@@ -106,6 +106,11 @@ void		ctr_sha_256( const u8* data,
 						 u32 size, 
 						 u8 hash[0x20] );
 
+int			ctr_sha_256_verify( const u8* data, 
+								u32 size, 
+								const u8 checkhash[0x20] );
+
+
 void		ctr_sha_256_init( ctr_sha256_context* ctx );
 
 void		ctr_sha_256_update( ctr_sha256_context* ctx, 
