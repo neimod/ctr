@@ -197,28 +197,36 @@ clean:
 void ncch_verify_hashes(ncch_context* ctx, u32 flags)
 {
 	u32 exefshashregionsize = getle32(ctx->header.exefshashregionsize) * 0x200;
-	u32 romfshashregionsize = getle32(ctx->header.exefshashregionsize) * 0x200;
+	u32 romfshashregionsize = getle32(ctx->header.romfshashregionsize) * 0x200;
 	u32 exheaderhashregionsize = getle32(ctx->header.extendedheadersize) * 0x200;
 	u8* exefshashregion = malloc(exefshashregionsize);
 	u8* romfshashregion = malloc(romfshashregionsize);
 	u8* exheaderhashregion = malloc(exheaderhashregionsize);
 
-	if (0 == ncch_extract_prepare(ctx, NCCHTYPE_EXEFS, flags))
-		goto clean;
-	if (0 == ncch_extract_buffer(ctx, exefshashregion, exefshashregionsize, &exefshashregionsize))
-		goto clean;
-	if (0 == ncch_extract_prepare(ctx, NCCHTYPE_ROMFS, flags))
-		goto clean;
-	if (0 == ncch_extract_buffer(ctx, romfshashregion, romfshashregionsize, &romfshashregionsize))
-		goto clean;
-	if (0 == ncch_extract_prepare(ctx, NCCHTYPE_EXHEADER, flags))
-		goto clean;
-	if (0 == ncch_extract_buffer(ctx, exheaderhashregion, exheaderhashregionsize, &exheaderhashregionsize))
-		goto clean;
-
-	ctx->exefshashcheck = ctr_sha_256_verify(exefshashregion, exefshashregionsize, ctx->header.exefssuperblockhash);
-	ctx->romfshashcheck = ctr_sha_256_verify(romfshashregion, romfshashregionsize, ctx->header.romfssuperblockhash);
-	ctx->exheaderhashcheck = ctr_sha_256_verify(exheaderhashregion, exheaderhashregionsize, ctx->header.extendedheaderhash);
+	if (exefshashregionsize)
+	{
+		if (0 == ncch_extract_prepare(ctx, NCCHTYPE_EXEFS, flags))
+			goto clean;
+		if (0 == ncch_extract_buffer(ctx, exefshashregion, exefshashregionsize, &exefshashregionsize))
+			goto clean;
+		ctx->exefshashcheck = ctr_sha_256_verify(exefshashregion, exefshashregionsize, ctx->header.exefssuperblockhash);
+	}
+	if (romfshashregionsize)
+	{
+		if (0 == ncch_extract_prepare(ctx, NCCHTYPE_ROMFS, flags))
+			goto clean;
+		if (0 == ncch_extract_buffer(ctx, romfshashregion, romfshashregionsize, &romfshashregionsize))
+			goto clean;
+		ctx->romfshashcheck = ctr_sha_256_verify(romfshashregion, romfshashregionsize, ctx->header.romfssuperblockhash);
+	}
+	if (exheaderhashregionsize)
+	{
+		if (0 == ncch_extract_prepare(ctx, NCCHTYPE_EXHEADER, flags))
+			goto clean;
+		if (0 == ncch_extract_buffer(ctx, exheaderhashregion, exheaderhashregionsize, &exheaderhashregionsize))
+			goto clean;
+		ctx->exheaderhashcheck = ctr_sha_256_verify(exheaderhashregion, exheaderhashregionsize, ctx->header.extendedheaderhash);
+	}
 
 	free(exefshashregion);
 	free(romfshashregion);
