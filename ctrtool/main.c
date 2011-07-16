@@ -42,6 +42,7 @@ static void usage(const char *argv0)
            "  -x, --extract      Extract data from file.\n"
 		   "                          This is also the default action.\n"
 		   "  -p, --plain        Extract data without decrypting.\n"
+		   "  -r, --raw          Keep raw data, don't unpack.\n"
 		   "  -k, --keyset=file  Specify keyset file.\n"
 		   "  -v, --verbose      Give verbose output.\n"
 		   "  -y, --verify       Verify hashes and signatures.\n"
@@ -104,10 +105,11 @@ int main(int argc, char* argv[])
 			{"ncch", 1, NULL, 'n'},
 			{"verbose", 0, NULL, 'v'},
 			{"verify", 0, NULL, 'y'},
+			{"raw", 0, NULL, 'r'},
 			{NULL},
 		};
 
-		c = getopt_long(argc, argv, "yxivpk:n:", long_options, &option_index);
+		c = getopt_long(argc, argv, "ryxivpk:n:", long_options, &option_index);
 		if (c == -1)
 			break;
 
@@ -127,6 +129,10 @@ int main(int argc, char* argv[])
 
 			case 'p':
 				ctx.actions |= PlainFlag;
+			break;
+
+			case 'r':
+				ctx.actions |= RawFlag;
 			break;
 
 			case 'i':

@@ -16,6 +16,7 @@ enum flags
 	PlainFlag = (1<<2),
 	VerboseFlag = (1<<3),
 	VerifyFlag = (1<<4),
+	RawFlag = (1<<5),
 };
 
 enum hashstate

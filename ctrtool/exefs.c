@@ -1,10 +1,12 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "types.h"
 #include "exefs.h"
 #include "utils.h"
 #include "ncch.h"
+#include "lzss.h"
 
 void exefs_init(exefs_context* ctx)
 {
@@ -42,6 +44,11 @@ void exefs_set_partitionid(exefs_context* ctx, u8 partitionid[8])
 	memcpy(ctx->partitionid, partitionid, 8);
 }
 
+void exefs_set_compressedflag(exefs_context* ctx, int compressedflag)
+{
+	ctx->compressedflag = compressedflag;
+}
+
 void exefs_save(exefs_context* ctx, u32 index, u32 flags)
 {
 	exefs_sectionheader* section = (exefs_sectionheader*)(ctx->header.section + index);
@@ -50,7 +57,10 @@ void exefs_save(exefs_context* ctx, u32 index, u32 flags)
 	u32 offset;
 	u32 size;
 	FILE* fout;
-	u8 buffer[16 * 1024];
+	u32 compressedsize = 0;
+	u32 decompressedsize = 0;
+	u8* compressedbuffer = 0;
+	u8* decompressedbuffer = 0;
 
 	offset = getle32(section->offset) + sizeof(exefs_header);
 	size = getle32(section->size);
@@ -85,37 +95,83 @@ void exefs_save(exefs_context* ctx, u32 index, u32 flags)
 	}
 	
 
-	fprintf(stdout, "Saving section %s to %s...\n", name, outfname);
 	fseek(ctx->file, ctx->offset + offset, SEEK_SET);
 	ctr_init_ncch(&ctx->aes, ctx->key, ctx->partitionid, NCCHTYPE_EXEFS);
 	ctr_add_counter(&ctx->aes, offset / 0x10);
 
-
-	while(size)
+	if (index == 0 && ctx->compressedflag && ((flags & RawFlag) == 0))
 	{
-		u32 max = sizeof(buffer);
-		if (max > size)
-			max = size;
+		fprintf(stdout, "Decompressing section %s to %s...\n", name, outfname);
 
-		if (max != fread(buffer, 1, max, ctx->file))
+		compressedsize = size;
+		compressedbuffer = malloc(compressedsize);
+
+		if (compressedbuffer == 0)
+		{
+			fprintf(stdout, "Error allocating memory\n");
+			goto clean;
+		}
+		if (compressedsize != fread(compressedbuffer, 1, compressedsize, ctx->file))
 		{
 			fprintf(stdout, "Error reading input file\n");
 			goto clean;
 		}
 
 		if (0 == (flags & PlainFlag))
-			ctr_crypt_counter(&ctx->aes, buffer, buffer, max);
+			ctr_crypt_counter(&ctx->aes, compressedbuffer, compressedbuffer, compressedsize);
 
-		if (max != fwrite(buffer, 1, max, fout))
+
+		decompressedsize = lzss_get_decompressed_size(compressedbuffer, compressedsize);
+		decompressedbuffer = malloc(decompressedsize);
+		if (decompressedbuffer == 0)
 		{
-			fprintf(stdout, "Error writing output file\n");
+			fprintf(stdout, "Error allocating memory\n");
 			goto clean;
 		}
 
-		size -= max;
-	}	
+		if (0 == lzss_decompress(compressedbuffer, compressedsize, decompressedbuffer, decompressedsize))
+			goto clean;
+
+		if (decompressedsize != fwrite(decompressedbuffer, 1, decompressedsize, fout))
+		{
+			fprintf(stdout, "Error writing output file\n");
+			goto clean;
+		}		
+	}
+	else
+	{
+		u8 buffer[16 * 1024];
+
+		fprintf(stdout, "Saving section %s to %s...\n", name, outfname);
+
+		while(size)
+		{
+			u32 max = sizeof(buffer);
+			if (max > size)
+				max = size;
+
+			if (max != fread(buffer, 1, max, ctx->file))
+			{
+				fprintf(stdout, "Error reading input file\n");
+				goto clean;
+			}
+
+			if (0 == (flags & PlainFlag))
+				ctr_crypt_counter(&ctx->aes, buffer, buffer, max);
+
+			if (max != fwrite(buffer, 1, max, fout))
+			{
+				fprintf(stdout, "Error writing output file\n");
+				goto clean;
+			}
+
+			size -= max;
+		}
+	}
 
 clean:
+	free(compressedbuffer);
+	free(decompressedbuffer);
 	return;
 }
 
