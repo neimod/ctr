@@ -49,18 +49,17 @@ int exheader_get_compressedflag(exheader_context* ctx)
 
 int exheader_process(exheader_context* ctx, u32 actions)
 {
-	exheader_codesetinfo* codesetinfo = (exheader_codesetinfo*)ctx->header.reserved;
-
 	fseek(ctx->file, ctx->offset, SEEK_SET);
 	fread(&ctx->header, 1, sizeof(exheader_header), ctx->file);
+
 
 	ctr_init_ncch(&ctx->aes, ctx->key, ctx->partitionid, NCCHTYPE_EXHEADER);
 	ctr_crypt_counter(&ctx->aes, (u8*)&ctx->header, (u8*)&ctx->header, sizeof(exheader_header));
 
-	if (codesetinfo->flags.flag & 1)
+	if (ctx->header.codesetinfo.flags.flag & 1)
 		ctx->compressedflag = 1;
 
-	if (memcmp(ctx->header.programid, ctx->programid, 8))
+	if (memcmp(ctx->header.arm11systemlocalcaps.programid, ctx->programid, 8))
 	{
 		fprintf(stderr, "Error, program id mismatch. Wrong key?\n");
 		return 0;
@@ -76,8 +75,10 @@ int exheader_process(exheader_context* ctx, u32 actions)
 
 void exheader_print(exheader_context* ctx)
 {
+	u32 i;
 	char name[9];
-	exheader_codesetinfo* codesetinfo = (exheader_codesetinfo*)ctx->header.reserved;
+	char service[9];
+	exheader_codesetinfo* codesetinfo = &ctx->header.codesetinfo;
 
 	memset(name, 0, sizeof(name));
 	memcpy(name, codesetinfo->name, 8);
@@ -102,4 +103,31 @@ void exheader_print(exheader_context* ctx)
 	fprintf(stdout, "Code bss size:          0x%08X\n", getle32(codesetinfo->bsssize));
 	fprintf(stdout, "Code stack size:        0x%08X\n", getle32(codesetinfo->stacksize));
 
+	for(i=0; i<0x30; i++)
+	{
+		if (getle64(ctx->header.deplist.programid[i]) != 0x0000000000000000UL)
+			fprintf(stdout, "Dependency:             %016llX\n", getle64(ctx->header.deplist.programid[i]));
+	}
+
+	fprintf(stdout, "Savedata size:          0x%08X\n", getle32(ctx->header.systeminfo.savedatasize));
+	fprintf(stdout, "Jump id:                %016llX\n", getle64(ctx->header.systeminfo.jumpid));
+
+	fprintf(stdout, "Program id:             %016llX\n", getle64(ctx->header.arm11systemlocalcaps.programid));
+	memdump(stdout, "Flags:                  ", ctx->header.arm11systemlocalcaps.flags, 8);
+	// print resource limit descriptor too? currently mostly zeroes...
+	fprintf(stdout, "Ext savedata id:        %016llX\n", getle64(ctx->header.arm11systemlocalcaps.storageinfo.extsavedataid));
+	fprintf(stdout, "System savedata id:     %016llX\n", getle64(ctx->header.arm11systemlocalcaps.storageinfo.systemsavedataid));
+	memdump(stdout, "Access info:            ", ctx->header.arm11systemlocalcaps.storageinfo.accessinfo, 7);
+	fprintf(stdout, "Other attributes:       %02X\n", ctx->header.arm11systemlocalcaps.storageinfo.otherattributes);
+	
+	for(i=0; i<0x20; i++)
+	{
+		if (getle64(ctx->header.arm11systemlocalcaps.serviceaccesscontrol[i]) != 0x0000000000000000UL)
+		{
+			memset(service, 0, sizeof(service));
+			memcpy(service, ctx->header.arm11systemlocalcaps.serviceaccesscontrol[i], 8);
+			fprintf(stdout, "Service access:         %s\n", service);
+		}
+	}
+	fprintf(stdout, "Reslimit category       %02X\n", ctx->header.arm11systemlocalcaps.resourcelimitcategory);
 }

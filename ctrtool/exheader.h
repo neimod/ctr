@@ -33,9 +33,43 @@ typedef struct
 
 typedef struct
 {
-	u8 reserved[0x200];
+	u8 programid[0x30][8];
+} exheader_dependencylist;
+
+typedef struct
+{
+	u8 savedatasize[4];
+	u8 reserved[4];
+	u8 jumpid[8];
+	u8 reserved2[0x30];
+} exheader_systeminfo;
+
+typedef struct
+{
+	u8 extsavedataid[8];
+	u8 systemsavedataid[8];
+	u8 reserved[8];
+	u8 accessinfo[7];
+	u8 otherattributes;
+} exheader_storageinfo;
+
+typedef struct
+{
 	u8 programid[8];
-	u8 reserved2[0x600 - 8];
+	u8 flags[8];
+	u8 resourcelimitdescriptor[0x10][2];
+	exheader_storageinfo storageinfo;
+	u8 serviceaccesscontrol[0x20][8];
+	u8 reserved[0x1f];
+	u8 resourcelimitcategory;
+} exheader_arm11systemlocalcaps;
+
+typedef struct
+{
+	exheader_codesetinfo codesetinfo;
+	exheader_dependencylist deplist;
+	exheader_systeminfo systeminfo;
+	exheader_arm11systemlocalcaps arm11systemlocalcaps;
 } exheader_header;
 
 typedef struct
