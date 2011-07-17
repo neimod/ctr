@@ -34,6 +34,7 @@ typedef struct
 	rsakey2048 ncchrsakey;
 	rsakey2048 nccholdrsakey;
 	rsakey2048 ncchdlprsakey;
+	rsakey2048 dlpoldrsakey;
 	rsakey2048 crrrsakey;
 } keyset;
 

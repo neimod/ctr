@@ -98,6 +98,10 @@ int			ctr_rsa_verify_hash( const u8 signature[0x100],
 								 const u8 hash[0x20], 
 								 rsakey2048* key);
 
+int			ctr_rsa_sign_hash( const u8 hash[0x20], 
+							   u8 signature[0x100], 
+							   rsakey2048* key );
+
 int			ctr_rsa_public( const u8 signature[0x100], 
 						    u8 output[0x100], 
 							rsakey2048* key );

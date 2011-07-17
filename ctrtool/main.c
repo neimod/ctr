@@ -182,7 +182,7 @@ int main(int argc, char* argv[])
 		goto clean;
 
 	ncch_set_file(&ctx.ncch, ctx.infile);
-	ncch_set_key(&ctx.ncch, ctx.keys.ncchctrkey.data);
+	ncch_load_keys(&ctx.ncch, &ctx.keys);
 	cia_set_file(&ctx.cia, ctx.infile);
 	cia_set_offset(&ctx.cia, 0);
 	if (ctx.keys.commonkey.valid)

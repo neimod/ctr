@@ -66,10 +66,12 @@ typedef struct
 	rsakey2048 ncchrsakey;
 	rsakey2048 nccholdrsakey;
 	rsakey2048 ncchdlprsakey;
+	rsakey2048 dlpoldrsakey;
 	rsakey2048 crrrsakey;
 	int exefshashcheck;
 	int romfshashcheck;
 	int exheaderhashcheck;
+	int headersigcheck;
 	u32 extractsize;
 	u32 extractflags;
 } ncch_context;

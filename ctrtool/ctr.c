@@ -257,6 +257,25 @@ int ctr_rsa_verify_hash(const u8 signature[0x100], const u8 hash[0x20], rsakey20
 	ctr_rsa_free(&ctx);
 
 	if (result == 0)
+		return HashGood;
+	else
+		return HashFail;
+}
+
+
+int ctr_rsa_sign_hash(const u8 hash[0x20], u8 signature[0x100], rsakey2048* key)
+{
+	ctr_rsa_context ctx;
+	u32 result;
+
+	ctr_rsa_init(&ctx, key);
+
+	result = rsa_pkcs1_verify(&ctx.rsa, RSA_PUBLIC, SIG_RSA_SHA256, 0x20, hash, (u8*)signature);
+	result = rsa_pkcs1_sign(&ctx.rsa, RSA_PRIVATE, SIG_RSA_SHA256, 0x20, hash, signature);
+
+	ctr_rsa_free(&ctx);
+
+	if (result == 0)
 		return 1;
 	else
 		return 0;

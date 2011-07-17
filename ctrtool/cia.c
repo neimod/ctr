@@ -197,7 +197,9 @@ void cia_process(cia_context* ctx, u32 actions)
 		tik_set_commonkey(&ctx->tik, ctx->key);
 
 	tik_process(&ctx->tik, actions);
-	tik_get_iv(&ctx->tik, ctx->iv);
+	memset(ctx->iv, 0, 16);
+
+	
 
 	if (ctx->keyvalid)
 		tik_get_decrypted_titlekey(&ctx->tik, ctx->titlekey);

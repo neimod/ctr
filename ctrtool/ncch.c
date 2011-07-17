@@ -32,6 +32,7 @@ void ncch_load_keys(ncch_context* ctx, keyset* keys)
 	memcpy(&ctx->ncchrsakey, &keys->ncchrsakey, sizeof(rsakey2048));
 	memcpy(&ctx->nccholdrsakey, &keys->nccholdrsakey, sizeof(rsakey2048));
 	memcpy(&ctx->ncchdlprsakey, &keys->ncchdlprsakey, sizeof(rsakey2048));
+	memcpy(&ctx->dlpoldrsakey, &keys->dlpoldrsakey, sizeof(rsakey2048));
 	memcpy(&ctx->crrrsakey, &keys->crrrsakey, sizeof(rsakey2048));
 }
 
@@ -254,7 +255,21 @@ void ncch_process(ncch_context* ctx, u32 actions)
 	exefs_set_partitionid(&ctx->exefs, ctx->header.partitionid);
 
 	if (actions & VerifyFlag)
+	{
+		ctx->headersigcheck = ncch_signature_verify(&ctx->header, &ctx->ncchrsakey);
+		if (ctx->headersigcheck == HashFail)
+			ctx->headersigcheck = ncch_signature_verify(&ctx->header, &ctx->ncchdlprsakey);
+		if (ctx->headersigcheck == HashFail)
+			ctx->headersigcheck = ncch_signature_verify(&ctx->header, &ctx->crrrsakey);
+		if (ctx->headersigcheck == HashFail)
+			ctx->headersigcheck = ncch_signature_verify(&ctx->header, &ctx->ncsdrsakey);
+		if (ctx->headersigcheck == HashFail)
+			ctx->headersigcheck = ncch_signature_verify(&ctx->header, &ctx->nccholdrsakey);
+		if (ctx->headersigcheck == HashFail)
+			ctx->headersigcheck = ncch_signature_verify(&ctx->header, &ctx->dlpoldrsakey);
+
 		ncch_verify_hashes(ctx, actions);
+	}
 
 	if (actions & InfoFlag)
 		ncch_print(ctx);		
@@ -279,11 +294,19 @@ int ncch_signature_verify(const ctr_ncchheader* header, rsakey2048* key)
 	u8 hash[0x20];
 	u8 output[0x100];
 
+#if 0
 	ctr_rsa_public(header->signature, output, key);
-
 	memdump(stdout, "RSA decrypted:      ", output, 0x100);
+#endif
+
+	
 
 	ctr_sha_256(header->magic, 0x100, hash);
+
+#if 0
+	ctr_rsa_sign_hash(hash, output, key);
+	memdump(stdout, "RSA signed:    ", output, 0x100);
+#endif
 	return ctr_rsa_verify_hash(header->signature, hash, key);
 }
 
@@ -325,17 +348,6 @@ void ncch_print(ncch_context* ctx)
 	int sigcheck = 0;
 	u32 offset = ctx->offset;
 
-/*
-	sigcheck = ncch_signature_verify(header, &ctx->ncchrsakey);
-	if (!sigcheck)
-		sigcheck = ncch_signature_verify(header, &ctx->ncchdlprsakey);
-	if (!sigcheck)
-		sigcheck = ncch_signature_verify(header, &ctx->crrrsakey);
-	if (!sigcheck)
-		sigcheck = ncch_signature_verify(header, &ctx->ncsdrsakey);
-	if (!sigcheck)
-		sigcheck = ncch_signature_verify(header, &ctx->nccholdrsakey);
-*/
 
 	fprintf(stdout, "\nNCCH:\n");
 	memcpy(magic, header->magic, 4);
@@ -344,7 +356,9 @@ void ncch_print(ncch_context* ctx)
 	productcode[0x10] = 0;
 
 	fprintf(stdout, "Header:                 %s\n", magic);
-	if (sigcheck)
+	if (ctx->headersigcheck == HashUnchecked)
+		memdump(stdout, "Signature:              ", header->signature, 0x100);
+	else if (ctx->headersigcheck == HashGood)
 		memdump(stdout, "Signature (GOOD):       ", header->signature, 0x100);
 	else
 		memdump(stdout, "Signature (FAIL):       ", header->signature, 0x100);
