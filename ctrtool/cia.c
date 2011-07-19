@@ -96,7 +96,6 @@ void cia_save(cia_context* ctx, u32 type, u32 flags)
 			size = ctx->sizecontent;
 			path = &ctx->contentpath;
 			
-			ctr_init_cbc_decrypt(&ctx->aes, ctx->titlekey, ctx->iv);
 		break;
 
 		case CIATYPE_META:
@@ -131,6 +130,11 @@ void cia_save(cia_context* ctx, u32 type, u32 flags)
 					i, getbe32(chunk->id), getbe16(chunk->index), getbe64(chunk->size)
 				);
 
+				ctx->iv[0] = (getbe16(chunk->index) >> 8) & 0xff;
+				ctx->iv[1] = getbe16(chunk->index) & 0xff;
+
+				ctr_init_cbc_decrypt(&ctx->aes, ctx->titlekey, ctx->iv);
+
 				sprintf(tmpname, "%s.%04x.%08x", path->pathname, getbe16(chunk->index), getbe32(chunk->id));
 				cia_save_blob(ctx, tmpname, offset, getbe64(chunk->size) & 0xffffffff, 1);
 
@@ -138,6 +142,8 @@ void cia_save(cia_context* ctx, u32 type, u32 flags)
 
 				chunk++;
 			}
+
+			memset(ctx->iv, 0, 16);
 
 			return;
 		break;
