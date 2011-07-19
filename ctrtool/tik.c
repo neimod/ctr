@@ -96,7 +96,7 @@ void tik_print(tik_context* ctx)
 	fprintf(stdout,
 		"Signature Type:         %08x\n"
 		"Issuer:                 %s\n",
-		tik->sig_type, tik->issuer
+		getle32(tik->sig_type), tik->issuer
 	);
 
 	fprintf(stdout, "Signature:\n");
@@ -109,7 +109,7 @@ void tik_print(tik_context* ctx)
 		memdump(stdout, "Decrypted Titlekey:     ", ctx->titlekey, 0x10);
 
 	memdump(stdout,	"Ticket ID:              ", tik->ticket_id, 0x08);
-	fprintf(stdout, "Ticket Version:         %d\n", tik->ticket_version);
+	fprintf(stdout, "Ticket Version:         %d\n", getle16(tik->ticket_version));
 	memdump(stdout,	"Title ID:               ", tik->title_id, 0x08);
 	fprintf(stdout, "Common Key Index:       %d\n", tik->commonkey_idx);
 
