@@ -28,18 +28,12 @@ void tmd_set_size(tmd_context* ctx, u32 size)
 
 void tmd_process(tmd_context* ctx, u32 actions)
 {
-	ctx->buffer = malloc(ctx->size);
+	if (ctx->buffer == 0) {
+		ctx->buffer = malloc(ctx->size);
 
-	fseek(ctx->file, ctx->offset, SEEK_SET);
-	fread(ctx->buffer, 1, ctx->size, ctx->file);
-
-
-	if (actions & InfoFlag)
-	{
-		tmd_print(ctx); 
+		fseek(ctx->file, ctx->offset, SEEK_SET);
+		fread(ctx->buffer, 1, ctx->size, ctx->file);
 	}
-
-	free(ctx->buffer);
 }
 
 ctr_tmd_body *tmd_get_body(tmd_context *ctx) {
@@ -80,7 +74,7 @@ void tmd_print(tmd_context* ctx)
 
 	contentcount = getbe16(body->contentcount);
 
-	fprintf(stdout, "TMD header:\n");
+	fprintf(stdout, "\nTMD header:\n");
 	fprintf(stdout, "Issuer:                 %s\n", body->issuer);
 	fprintf(stdout, "Version:                %d\n", body->version);
 	fprintf(stdout, "CA CRL version:         %d\n", body->ca_crl_version);
@@ -94,21 +88,21 @@ void tmd_print(tmd_context* ctx)
 	fprintf(stdout, "Content count:          %04x\n", getbe16(body->contentcount));
 	fprintf(stdout, "Boot content:           %04x\n", getbe16(body->bootcontent));
 	memdump(stdout, "Hash:                   ", body->hash, 32);
-	fprintf(stdout, "TMD content info:\n");
-	for(i=0; i<64; i++)
+
+	fprintf(stdout, "\nTMD content info:\n");
+	for(i = 0; i < TMD_MAX_CONTENTS; i++)
 	{
-		ctr_tmd_contentinfo* info = (ctr_tmd_contentinfo*)(body->contentinfo + 36*i);
+		ctr_tmd_contentinfo* info = (ctr_tmd_contentinfo*)(body->contentinfo + sizeof(ctr_tmd_contentinfo)*i);
 
 		if (getbe16(info->commandcount) == 0)
 			continue;
-		
-		
+
 		fprintf(stdout, "Content index:          %04x\n", getbe16(info->index));
 		fprintf(stdout, "Command count:          %04x\n", getbe16(info->commandcount));
 		memdump(stdout, "Unknown:                ", info->unk, 32);
 	}
-	fprintf(stdout, "TMD contents:\n");
-	for(i=0; i<contentcount; i++)
+	fprintf(stdout, "\nTMD contents:\n");
+	for(i = 0; i < contentcount; i++)
 	{
 		ctr_tmd_contentchunk* chunk = (ctr_tmd_contentchunk*)(body->contentinfo + 36*64 + i*48);
 		unsigned short type = getbe16(chunk->type);
@@ -132,6 +126,13 @@ void tmd_print(tmd_context* ctx)
 		}
 		fprintf(stdout, "\n");
 		fprintf(stdout, "Content size:           %016llx\n", getbe64(chunk->size));
-		memdump(stdout, "Content hash:           ", chunk->hash, 32);
+
+		switch(ctx->content_hash_stat[getbe16(chunk->index)]) {
+			case 1:  memdump(stdout, "Content hash [OK]:      ", chunk->hash, 32); break;
+			case 2:  memdump(stdout, "Content hash [FAIL]:    ", chunk->hash, 32); break;
+			default: memdump(stdout, "Content hash:           ", chunk->hash, 32); break; 
+		}
+
+		fprintf(stdout, "\n");
 	}
 }

@@ -121,7 +121,7 @@ void cia_save(cia_context* ctx, u32 type, u32 flags)
 		case CIATYPE_CONTENT:
 
 			body  = tmd_get_body(&ctx->tmd);
-			chunk = (ctr_tmd_contentchunk*)(body->contentinfo + (36*64));
+			chunk = (ctr_tmd_contentchunk*)(body->contentinfo + (sizeof(ctr_tmd_contentinfo) * TMD_MAX_CONTENTS));
 
 			for(i = 0; i < getbe16(body->contentcount); i++) {
 				sprintf(tmpname, "%s.%04x.%08x", path->pathname, getbe16(chunk->index), getbe32(chunk->id));
@@ -240,6 +240,14 @@ void cia_process(cia_context* ctx, u32 actions)
 	tmd_set_size(&ctx->tmd, ctx->sizetmd);
 	tmd_process(&ctx->tmd, actions);
 
+	if (actions & VerifyFlag)
+	{
+		cia_verify_contents(ctx);
+	}
+
+	if (actions & InfoFlag || actions & VerifyFlag)
+		tmd_print(&ctx->tmd);
+
 	if (actions & ExtractFlag)
 	{
 		cia_save(ctx, CIATYPE_CERTS, actions);
@@ -251,6 +259,43 @@ void cia_process(cia_context* ctx, u32 actions)
 
 clean:
 	return;
+}
+
+void cia_verify_contents(cia_context *ctx)
+{
+	ctr_tmd_body *body;
+	ctr_tmd_contentchunk *chunk;
+	u8 *verify_buf;
+	u32 content_size=0;
+	int i;
+
+	// verify TMD content hashes, requires decryption ..
+	body  = tmd_get_body(&ctx->tmd);
+	chunk = (ctr_tmd_contentchunk*)(body->contentinfo + (sizeof(ctr_tmd_contentinfo) * TMD_MAX_CONTENTS));
+
+	fseek(ctx->file, ctx->offset + ctx->offsetcontent, SEEK_SET);
+	for(i = 0; i < getbe16(body->contentcount); i++) {
+		content_size = getbe64(chunk->size) & 0xffffffff;
+
+		ctx->iv[0] = (getbe16(chunk->index) >> 8) & 0xff;
+		ctx->iv[1] = getbe16(chunk->index) & 0xff;
+
+		ctr_init_cbc_decrypt(&ctx->aes, ctx->titlekey, ctx->iv);
+
+		verify_buf = malloc(content_size);
+		fread(verify_buf, content_size, 1, ctx->file);
+
+		ctr_decrypt_cbc(&ctx->aes, verify_buf, verify_buf, content_size);
+
+		if (ctr_sha_256_verify(verify_buf, content_size, chunk->hash) == HashGood)
+			ctx->tmd.content_hash_stat[i] = 1;
+		else
+			ctx->tmd.content_hash_stat[i] = 2;
+
+		free(verify_buf);
+
+		chunk++;
+	}
 }
 
 void cia_print(cia_context* ctx)

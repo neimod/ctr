@@ -3,6 +3,7 @@
 
 #include "types.h"
 
+#define TMD_MAX_CONTENTS 64
 
 typedef enum
 {
@@ -71,6 +72,7 @@ typedef struct
 	u32 offset;
 	u32 size;
 	u8* buffer;
+	u8 content_hash_stat[64];
 } tmd_context;
 
 

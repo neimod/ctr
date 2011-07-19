@@ -75,5 +75,6 @@ void cia_print(cia_context* ctx);
 void cia_save(cia_context* ctx, u32 type, u32 flags);
 void cia_process(cia_context* ctx, u32 actions);
 void cia_save_blob(cia_context *ctx, char *out_path, u32 offset, u32 size, int do_cbc);
+void cia_verify_contents(cia_context *ctx);
 
 #endif // _CIA_H_
