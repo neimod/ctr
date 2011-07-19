@@ -63,11 +63,13 @@ void cia_set_metapath(cia_context* ctx, const char* path)
 
 void cia_save(cia_context* ctx, u32 type, u32 flags)
 {
-	u8 buffer[16*1024];
-	FILE* fout = 0;
 	u32 offset;
 	u32 size;
 	filepath* path = 0;
+	ctr_tmd_body *body;
+	ctr_tmd_contentchunk *chunk;
+	int i;
+	char tmpname[255];
 
 	switch(type)
 	{
@@ -105,32 +107,59 @@ void cia_save(cia_context* ctx, u32 type, u32 flags)
 
 		default:
 			fprintf(stderr, "Error, unknown CIA type specified\n");
-			goto clean;
+			return;	
+		break;
 	}
 
 	if (path == 0 || path->valid == 0)
-		goto clean;
-
+		return;
 
 	switch(type)
 	{
 		case CIATYPE_CERTS: fprintf(stdout, "Saving certs to %s\n", path->pathname); break;
 		case CIATYPE_TIK: fprintf(stdout, "Saving tik to %s\n", path->pathname); break;
 		case CIATYPE_TMD: fprintf(stdout, "Saving tmd to %s\n", path->pathname); break;
-		case CIATYPE_CONTENT: fprintf(stdout, "Saving content to %s\n", path->pathname); break;
+		case CIATYPE_CONTENT:
+			fprintf(stdout, "Saving content to %s\n", path->pathname);
+
+			body  = tmd_get_body(&ctx->tmd);
+			chunk = (ctr_tmd_contentchunk*)(body->contentinfo + (36*64));
+
+			for(i = 0; i < getbe16(body->contentcount); i++) {
+				printf(
+					"content %04x : id:%08x idx:%04x size:%016llx\n",
+					i, getbe32(chunk->id), getbe16(chunk->index), getbe64(chunk->size)
+				);
+
+				sprintf(tmpname, "%s.%04x.%08x", path->pathname, getbe16(chunk->index), getbe32(chunk->id));
+				cia_save_blob(ctx, tmpname, offset, getbe64(chunk->size) & 0xffffffff, 1);
+
+				offset += getbe64(chunk->size) & 0xffffffff;
+
+				chunk++;
+			}
+
+			return;
+		break;
+
 		case CIATYPE_META: fprintf(stdout, "Saving meta to %s\n", path->pathname); break;
 	}
 
+	cia_save_blob(ctx, path->pathname, offset, size, 0);
+}
+
+void cia_save_blob(cia_context *ctx, char *out_path, u32 offset, u32 size, int do_cbc) {
+	u8 buffer[16*1024];
 
 	fseek(ctx->file, ctx->offset + offset, SEEK_SET);
 
-	fout = fopen(path->pathname, "wb");
-	if (0 == fout)
+	FILE *fout = fopen(out_path, "wb");
+
+	if (fout == NULL)
 	{
-		fprintf(stdout, "Error opening out file %s\n", path->pathname);
+		fprintf(stdout, "Error opening out file %s\n", out_path);
 		goto clean;
 	}
-
 
 	while(size)
 	{
@@ -144,7 +173,7 @@ void cia_save(cia_context* ctx, u32 type, u32 flags)
 			goto clean;
 		}
 
-		if (0 == (flags & PlainFlag) && type == CIATYPE_CONTENT)
+		if (do_cbc == 1)
 			ctr_decrypt_cbc(&ctx->aes, buffer, buffer, max);
 
 		if (max != fwrite(buffer, 1, max, fout))
