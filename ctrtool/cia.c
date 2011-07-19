@@ -119,23 +119,19 @@ void cia_save(cia_context* ctx, u32 type, u32 flags)
 		case CIATYPE_TIK: fprintf(stdout, "Saving tik to %s\n", path->pathname); break;
 		case CIATYPE_TMD: fprintf(stdout, "Saving tmd to %s\n", path->pathname); break;
 		case CIATYPE_CONTENT:
-			fprintf(stdout, "Saving content to %s\n", path->pathname);
 
 			body  = tmd_get_body(&ctx->tmd);
 			chunk = (ctr_tmd_contentchunk*)(body->contentinfo + (36*64));
 
 			for(i = 0; i < getbe16(body->contentcount); i++) {
-				printf(
-					"content %04x : id:%08x idx:%04x size:%016llx\n",
-					i, getbe32(chunk->id), getbe16(chunk->index), getbe64(chunk->size)
-				);
+				sprintf(tmpname, "%s.%04x.%08x", path->pathname, getbe16(chunk->index), getbe32(chunk->id));
+				fprintf(stdout, "Saving content #%04x to %s\n", getbe16(chunk->index), tmpname);
 
 				ctx->iv[0] = (getbe16(chunk->index) >> 8) & 0xff;
 				ctx->iv[1] = getbe16(chunk->index) & 0xff;
 
 				ctr_init_cbc_decrypt(&ctx->aes, ctx->titlekey, ctx->iv);
 
-				sprintf(tmpname, "%s.%04x.%08x", path->pathname, getbe16(chunk->index), getbe32(chunk->id));
 				cia_save_blob(ctx, tmpname, offset, getbe64(chunk->size) & 0xffffffff, 1);
 
 				offset += getbe64(chunk->size) & 0xffffffff;
