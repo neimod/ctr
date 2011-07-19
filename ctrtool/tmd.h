@@ -85,6 +85,7 @@ void tmd_set_offset(tmd_context* ctx, u32 offset);
 void tmd_set_size(tmd_context* ctx, u32 size);
 void tmd_print(tmd_context* ctx);
 void tmd_process(tmd_context* ctx, u32 actions);
+ctr_tmd_body *tmd_get_body(tmd_context *ctx);
 
 #ifdef __cplusplus
 }

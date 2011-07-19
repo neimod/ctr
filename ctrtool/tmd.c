@@ -42,6 +42,22 @@ void tmd_process(tmd_context* ctx, u32 actions)
 	free(ctx->buffer);
 }
 
+ctr_tmd_body *tmd_get_body(tmd_context *ctx) {
+	unsigned int type = getbe32(ctx->buffer);
+	ctr_tmd_body *body = NULL;
+
+	if (type == TMD_RSA_2048_SHA256 || type == TMD_RSA_2048_SHA1)
+	{
+		body = (ctr_tmd_body*)(ctx->buffer + sizeof(ctr_tmd_header_2048));
+	}
+	else if (type == TMD_RSA_4096_SHA256 || type == TMD_RSA_4096_SHA1)
+	{
+		body = (ctr_tmd_body*)(ctx->buffer + sizeof(ctr_tmd_header_4096));
+	}
+
+	return body;
+}
+
 void tmd_print(tmd_context* ctx)
 {
 	unsigned int type = getbe32(ctx->buffer);
@@ -51,16 +67,16 @@ void tmd_print(tmd_context* ctx)
 	unsigned int contentcount = 0;
 	unsigned int i;
 
-	if (type == TMD_RSA_2048_SHA256 || TMD_RSA_2048_SHA1)
+	if (type == TMD_RSA_2048_SHA256 || type == TMD_RSA_2048_SHA1)
 	{
 		header2048 = (ctr_tmd_header_2048*)ctx->buffer;
-		body = (ctr_tmd_body*)(ctx->buffer + sizeof(ctr_tmd_header_2048));
 	}
 	else if (type == TMD_RSA_4096_SHA256 || type == TMD_RSA_4096_SHA1)
 	{
 		header4096 = (ctr_tmd_header_4096*)ctx->buffer;
-		body = (ctr_tmd_body*)(ctx->buffer + sizeof(ctr_tmd_header_4096));
 	}
+
+	body = tmd_get_body(ctx);
 
 	contentcount = getbe16(body->contentcount);
 
