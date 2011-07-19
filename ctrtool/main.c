@@ -72,7 +72,6 @@ int main(int argc, char* argv[])
 	char infname[512];
 	int c;
 	u32 ncchoffset = ~0;
-	u8 key[16] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 	char keysetfname[512] = "keys.xml";
 	
 	memset(&ctx, 0, sizeof(toolcontext));
@@ -82,7 +81,6 @@ int main(int argc, char* argv[])
 	keyset_init(&ctx.keys);
 	ncch_init(&ctx.ncch);
 	cia_init(&ctx.cia);
-	
 
 	while (1) 
 	{
@@ -178,8 +176,10 @@ int main(int argc, char* argv[])
 
 	ctx.infile = fopen(infname, "rb");
 
-	if (ctx.infile == 0)
-		goto clean;
+	if (ctx.infile == 0) {
+		fprintf(stderr, "error: could not open input file! ('%s')\n", infname);
+		return -1;
+	}
 
 	ncch_set_file(&ctx.ncch, ctx.infile);
 	ncch_load_keys(&ctx.ncch, &ctx.keys);
@@ -247,8 +247,6 @@ int main(int argc, char* argv[])
 		break;
 	}
 	
-
-clean:
 	if (ctx.infile)
 		fclose(ctx.infile);
 
