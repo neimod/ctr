@@ -150,13 +150,15 @@ void cia_save(cia_context* ctx, u32 type, u32 flags)
 	cia_save_blob(ctx, path->pathname, offset, size, 0);
 }
 
-void cia_save_blob(cia_context *ctx, char *out_path, u32 offset, u32 size, int do_cbc) {
+void cia_save_blob(cia_context *ctx, char *out_path, u32 offset, u32 size, int do_cbc) 
+{
+	FILE *fout = 0;
 	u8 buffer[16*1024];
 
 	fseek(ctx->file, ctx->offset + offset, SEEK_SET);
 
-	FILE *fout = fopen(out_path, "wb");
-
+	
+	fout = fopen(out_path, "wb");
 	if (fout == NULL)
 	{
 		fprintf(stdout, "Error opening out file %s\n", out_path);

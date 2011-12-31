@@ -54,7 +54,8 @@ int exheader_process(exheader_context* ctx, u32 actions)
 
 
 	ctr_init_ncch(&ctx->aes, ctx->key, ctx->partitionid, NCCHTYPE_EXHEADER);
-	ctr_crypt_counter(&ctx->aes, (u8*)&ctx->header, (u8*)&ctx->header, sizeof(exheader_header));
+	if (0 == (actions & PlainFlag))
+		ctr_crypt_counter(&ctx->aes, (u8*)&ctx->header, (u8*)&ctx->header, sizeof(exheader_header));
 
 	if (ctx->header.codesetinfo.flags.flag & 1)
 		ctx->compressedflag = 1;
