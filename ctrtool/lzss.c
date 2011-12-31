@@ -21,22 +21,37 @@ int lzss_decompress(u8* compressed, u32 compressedsize, u8* decompressed, u32 de
 	u32 originalbottom = getle32(footer+4);
 	u32 i, j;
 	u32 out = decompressedsize;
-	u32 index = (buffertopandbottom & 0xFFFFFF) - ((buffertopandbottom>>24)&0xFF);
+	u32 index = compressedsize - ((buffertopandbottom>>24)&0xFF);
 	u32 segmentoffset;
 	u32 segmentsize;
 	u8 control;
+	u32 stopindex = compressedsize - (buffertopandbottom&0xFFFFFF);
+
+	memset(decompressed, 0, decompressedsize);
+	memcpy(decompressed, compressed, compressedsize);
+
 	
-	while(out)
+	while(index > stopindex)
 	{
 		control = compressed[--index];
+		
 
 		for(i=0; i<8; i++)
 		{
+			if (index <= 0)
+				break;
+
 			if (out <= 0)
 				break;
 
 			if (control & 0x80)
 			{
+				if (index < 2)
+				{
+					fprintf(stderr, "Error, compression out of bounds\n");
+					goto clean;
+				}
+
 				index -= 2;
 
 				segmentoffset = compressed[index] | (compressed[index+1]<<8);
@@ -44,6 +59,7 @@ int lzss_decompress(u8* compressed, u32 compressedsize, u8* decompressed, u32 de
 				segmentoffset &= 0x0FFF;
 				segmentoffset += 2;
 
+				
 				if (out < segmentsize)
 				{
 					fprintf(stderr, "Error, compression out of bounds\n");
@@ -76,12 +92,6 @@ int lzss_decompress(u8* compressed, u32 compressedsize, u8* decompressed, u32 de
 
 			control <<= 1;
 		}
-	}
-
-	if (index != 0)
-	{
-		fprintf(stderr, "Error, compressed data remaining\n");	
-		goto clean;
 	}
 
 	return 1;
