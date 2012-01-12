@@ -38,6 +38,9 @@ int lzss_decompress(u8* compressed, u32 compressedsize, u8* decompressed, u32 de
 
 		for(i=0; i<8; i++)
 		{
+			if (index <= stopindex)
+				break;
+
 			if (index <= 0)
 				break;
 
