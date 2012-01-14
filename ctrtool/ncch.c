@@ -6,6 +6,7 @@
 #include "utils.h"
 #include "ctr.h"
 
+
 void ncch_init(ncch_context* ctx)
 {
 	memset(ctx, 0, sizeof(ncch_context));
@@ -13,7 +14,14 @@ void ncch_init(ncch_context* ctx)
 	filepath_init(&ctx->romfspath);
 	filepath_init(&ctx->exheaderpath);
 	exefs_init(&ctx->exefs);
+	ncch_set_mediaunitsize(ctx, 0x200);
 }
+
+void ncch_set_mediaunitsize(ncch_context* ctx, u32 unitsize)
+{
+	ctx->mediaunitsize = unitsize;
+}
+
 
 void ncch_set_offset(ncch_context* ctx, u32 ncchoffset)
 {
@@ -197,9 +205,9 @@ clean:
 
 void ncch_verify_hashes(ncch_context* ctx, u32 flags)
 {
-	u32 exefshashregionsize = getle32(ctx->header.exefshashregionsize) * 0x200;
-	u32 romfshashregionsize = getle32(ctx->header.romfshashregionsize) * 0x200;
-	u32 exheaderhashregionsize = getle32(ctx->header.extendedheadersize) * 0x200;
+	u32 exefshashregionsize = getle32(ctx->header.exefshashregionsize) * ctx->mediaunitsize;
+	u32 romfshashregionsize = getle32(ctx->header.romfshashregionsize) * ctx->mediaunitsize;
+	u32 exheaderhashregionsize = getle32(ctx->header.extendedheadersize) * ctx->mediaunitsize;
 	u8* exefshashregion = malloc(exefshashregionsize);
 	u8* romfshashregion = malloc(romfshashregionsize);
 	u8* exheaderhashregion = malloc(exheaderhashregionsize);
@@ -312,22 +320,22 @@ int ncch_signature_verify(const ctr_ncchheader* header, rsakey2048* key)
 
 u32 ncch_get_exefs_offset(ncch_context* ctx)
 {
-	return ctx->offset + getle32(ctx->header.exefsoffset) * 0x200;
+	return ctx->offset + getle32(ctx->header.exefsoffset) * ctx->mediaunitsize;
 }
 
 u32 ncch_get_exefs_size(ncch_context* ctx)
 {
-	return getle32(ctx->header.exefssize) * 0x200;
+	return getle32(ctx->header.exefssize) * ctx->mediaunitsize;
 }
 
 u32 ncch_get_romfs_offset(ncch_context* ctx)
 {
-	return ctx->offset + getle32(ctx->header.romfsoffset) * 0x200;
+	return ctx->offset + getle32(ctx->header.romfsoffset) * ctx->mediaunitsize;
 }
 
 u32 ncch_get_romfs_size(ncch_context* ctx)
 {
-	return getle32(ctx->header.romfssize) * 0x200;
+	return getle32(ctx->header.romfssize) * ctx->mediaunitsize;
 }
 
 u32 ncch_get_exheader_offset(ncch_context* ctx)
@@ -362,7 +370,7 @@ void ncch_print(ncch_context* ctx)
 		memdump(stdout, "Signature (GOOD):       ", header->signature, 0x100);
 	else
 		memdump(stdout, "Signature (FAIL):       ", header->signature, 0x100);
-	fprintf(stdout, "Content size:           0x%08x\n", getle32(header->contentsize)*0x200);
+	fprintf(stdout, "Content size:           0x%08x\n", getle32(header->contentsize)*ctx->mediaunitsize);
 	fprintf(stdout, "Partition id:           %016llx\n", getle64(header->partitionid));
 	fprintf(stdout, "Maker code:             %04x\n", getle16(header->makercode));
 	fprintf(stdout, "Version:                %04x\n", getle16(header->version));
@@ -377,14 +385,14 @@ void ncch_print(ncch_context* ctx)
 	else
 		memdump(stdout, "Exheader hash (FAIL):   ", header->extendedheaderhash, 0x20);
 	fprintf(stdout, "Flags:                  %016llx\n", getle64(header->flags));
-	fprintf(stdout, "Plain region offset:    0x%08x\n", getle32(header->plainregionsize)? offset+getle32(header->plainregionoffset)*0x200 : 0);
-	fprintf(stdout, "Plain region size:      0x%08x\n", getle32(header->plainregionsize)*0x200);
-	fprintf(stdout, "ExeFS offset:           0x%08x\n", getle32(header->exefssize)? offset+getle32(header->exefsoffset)*0x200 : 0);
-	fprintf(stdout, "ExeFS size:             0x%08x\n", getle32(header->exefssize)*0x200);
-	fprintf(stdout, "ExeFS hash region size: 0x%08x\n", getle32(header->exefshashregionsize)*0x200);
-	fprintf(stdout, "RomFS offset:           0x%08x\n", getle32(header->romfssize)? offset+getle32(header->romfsoffset)*0x200 : 0);
-	fprintf(stdout, "RomFS size:             0x%08x\n", getle32(header->romfssize)*0x200);
-	fprintf(stdout, "RomFS hash region size: 0x%08x\n", getle32(header->romfshashregionsize)*0x200);
+	fprintf(stdout, "Plain region offset:    0x%08x\n", getle32(header->plainregionsize)? offset+getle32(header->plainregionoffset)*ctx->mediaunitsize : 0);
+	fprintf(stdout, "Plain region size:      0x%08x\n", getle32(header->plainregionsize)*ctx->mediaunitsize);
+	fprintf(stdout, "ExeFS offset:           0x%08x\n", getle32(header->exefssize)? offset+getle32(header->exefsoffset)*ctx->mediaunitsize : 0);
+	fprintf(stdout, "ExeFS size:             0x%08x\n", getle32(header->exefssize)*ctx->mediaunitsize);
+	fprintf(stdout, "ExeFS hash region size: 0x%08x\n", getle32(header->exefshashregionsize)*ctx->mediaunitsize);
+	fprintf(stdout, "RomFS offset:           0x%08x\n", getle32(header->romfssize)? offset+getle32(header->romfsoffset)*ctx->mediaunitsize : 0);
+	fprintf(stdout, "RomFS size:             0x%08x\n", getle32(header->romfssize)*ctx->mediaunitsize);
+	fprintf(stdout, "RomFS hash region size: 0x%08x\n", getle32(header->romfshashregionsize)*ctx->mediaunitsize);
 	if (ctx->exefshashcheck == HashUnchecked)
 		memdump(stdout, "ExeFS Hash:             ", header->exefssuperblockhash, 0x20);
 	else if (ctx->exefshashcheck == HashGood)

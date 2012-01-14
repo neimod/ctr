@@ -74,6 +74,7 @@ typedef struct
 	int headersigcheck;
 	u32 extractsize;
 	u32 extractflags;
+	u32 mediaunitsize;
 } ncch_context;
 
 void ncch_init(ncch_context* ctx);
@@ -86,6 +87,7 @@ void ncch_set_exefspath(ncch_context* ctx, const char* path);
 void ncch_set_exefsdirpath(ncch_context* ctx, const char* path);
 void ncch_set_romfspath(ncch_context* ctx, const char* path);
 void ncch_set_exheaderpath(ncch_context* ctx, const char* path);
+void ncch_set_mediaunitsize(ncch_context* ctx, u32 unitsize);
 u32 ncch_get_exefs_offset(ncch_context* ctx);
 u32 ncch_get_exefs_size(ncch_context* ctx);
 u32 ncch_get_romfs_offset(ncch_context* ctx);

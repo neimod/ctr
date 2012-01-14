@@ -46,6 +46,7 @@ static void usage(const char *argv0)
 		   "  -k, --keyset=file  Specify keyset file.\n"
 		   "  -v, --verbose      Give verbose output.\n"
 		   "  -y, --verify       Verify hashes and signatures.\n"
+		   "  --unitsize=size    Set media unit size (default 0x200).\n"
 		   "CXI/CCI options:\n"
 		   "  -n, --ncch=offs    Specify offset for NCCH header.\n"
 		   "  --exefs=file       Specify ExeFS file path.\n"
@@ -104,6 +105,7 @@ int main(int argc, char* argv[])
 			{"verbose", 0, NULL, 'v'},
 			{"verify", 0, NULL, 'y'},
 			{"raw", 0, NULL, 'r'},
+			{"unitsize", 1, NULL, 9},
 			{NULL},
 		};
 
@@ -154,6 +156,7 @@ int main(int argc, char* argv[])
 			case 6: cia_set_contentpath(&ctx.cia, optarg); break;
 			case 7: cia_set_metapath(&ctx.cia, optarg); break;
 			case 8: ncch_set_exefsdirpath(&ctx.ncch, optarg); break;
+			case 9: ncch_set_mediaunitsize(&ctx.ncch, strtoul(optarg, 0, 0)); break;
 
 
 			default:
