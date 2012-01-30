@@ -109,6 +109,7 @@ int keyset_load(keyset* keys, const char* fname, int verbose)
 	keyset_load_rsakey2048(root.FirstChild("dlpoldrsakey"), &keys->dlpoldrsakey);
 	keyset_load_rsakey2048(root.FirstChild("crrrsakey"), &keys->crrrsakey);
 	keyset_load_key128(root.FirstChild("commonkey"), &keys->commonkey);
+	keyset_load_key128(root.FirstChild("ncchctrkey"), &keys->ncchctrkey);
 
 	return 1;
 }
