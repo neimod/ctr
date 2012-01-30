@@ -47,6 +47,9 @@ static void usage(const char *argv0)
 		   "  -v, --verbose      Give verbose output.\n"
 		   "  -y, --verify       Verify hashes and signatures.\n"
 		   "  --unitsize=size    Set media unit size (default 0x200).\n"
+		   "  --commonkey=key    Set common key.\n"
+		   "  --ncchctrkey=key   Set ncchctr key.\n"
+		   "  --showkeys         Show the keys being used.\n"
 		   "CXI/CCI options:\n"
 		   "  -n, --ncch=offs    Specify offset for NCCH header.\n"
 		   "  --exefs=file       Specify ExeFS file path.\n"
@@ -74,12 +77,14 @@ int main(int argc, char* argv[])
 	int c;
 	u32 ncchoffset = ~0;
 	char keysetfname[512] = "keys.xml";
+	keyset tmpkeys;
 	
 	memset(&ctx, 0, sizeof(toolcontext));
 	ctx.actions = InfoFlag | ExtractFlag;
 	ctx.filetype = FILETYPE_UNKNOWN;
 
 	keyset_init(&ctx.keys);
+	keyset_init(&tmpkeys);
 	ncch_init(&ctx.ncch);
 	cia_init(&ctx.cia);
 
@@ -106,6 +111,9 @@ int main(int argc, char* argv[])
 			{"verify", 0, NULL, 'y'},
 			{"raw", 0, NULL, 'r'},
 			{"unitsize", 1, NULL, 9},
+			{"showkeys", 0, NULL, 10},
+			{"commonkey", 1, NULL, 11},
+			{"ncchctrkey", 1, NULL, 12},
 			{NULL},
 		};
 
@@ -157,6 +165,9 @@ int main(int argc, char* argv[])
 			case 7: cia_set_metapath(&ctx.cia, optarg); break;
 			case 8: ncch_set_exefsdirpath(&ctx.ncch, optarg); break;
 			case 9: ncch_set_mediaunitsize(&ctx.ncch, strtoul(optarg, 0, 0)); break;
+			case 10: ctx.actions |= ShowKeysFlag; break;
+			case 11: keyset_parse_commonkey(&tmpkeys, optarg, strlen(optarg)); break;
+			case 12: keyset_parse_ncchctrkey(&tmpkeys, optarg, strlen(optarg)); break;
 
 
 			default:
@@ -176,6 +187,9 @@ int main(int argc, char* argv[])
 	}
 
 	keyset_load(&ctx.keys, keysetfname, ctx.actions & VerboseFlag);
+	keyset_merge(&ctx.keys, &tmpkeys);
+	if (ctx.actions & ShowKeysFlag)
+		keyset_dump(&ctx.keys);
 
 	ctx.infile = fopen(infname, "rb");
 

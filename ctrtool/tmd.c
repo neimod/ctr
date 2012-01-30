@@ -69,6 +69,10 @@ void tmd_print(tmd_context* ctx)
 	{
 		header4096 = (ctr_tmd_header_4096*)ctx->buffer;
 	}
+	else
+	{
+		return;
+	}
 
 	body = tmd_get_body(ctx);
 

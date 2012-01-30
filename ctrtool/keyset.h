@@ -7,6 +7,13 @@
 extern "C" {
 #endif
 
+typedef enum
+{
+	KEY_ERR_LEN_MISMATCH,
+	KEY_ERR_INVALID_NODE,
+	KEY_OK
+} keystatus;
+
 typedef struct
 {
 	unsigned char n[256];
@@ -40,6 +47,12 @@ typedef struct
 
 void keyset_init(keyset* keys);
 int keyset_load(keyset* keys, const char* fname, int verbose);
+void keyset_merge(keyset* keys, keyset* src);
+void keyset_set_commonkey(keyset* keys, unsigned char* keydata);
+void keyset_parse_commonkey(keyset* keys, char* keytext, int keylen);
+void keyset_set_ncchctrkey(keyset* keys, unsigned char* keydata);
+void keyset_parse_ncchctrkey(keyset* keys, char* keytext, int keylen);
+void keyset_dump(keyset* keys);
 
 #ifdef __cplusplus
 }
