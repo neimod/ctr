@@ -1,0 +1,20 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 10.00
+# Visual Studio 2008
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ramclkcount", "ramclkcount.vcproj", "{1B2D88B5-B5E0-43C1-A43B-C9DF3A936226}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Win32 = Debug|Win32
+		Release|Win32 = Release|Win32
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{1B2D88B5-B5E0-43C1-A43B-C9DF3A936226}.Debug|Win32.ActiveCfg = Debug|Win32
+		{1B2D88B5-B5E0-43C1-A43B-C9DF3A936226}.Debug|Win32.Build.0 = Debug|Win32
+		{1B2D88B5-B5E0-43C1-A43B-C9DF3A936226}.Release|Win32.ActiveCfg = Release|Win32
+		{1B2D88B5-B5E0-43C1-A43B-C9DF3A936226}.Release|Win32.Build.0 = Release|Win32
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
