@@ -30,6 +30,11 @@
 #include <libusb.h>
 #include <stdint.h>
 #include <stdbool.h>
+#include <time.h>
+
+#ifndef LIBUSB_CALL
+#define LIBUSB_CALL
+#endif
 
 typedef enum {
   FTDI_BITMODE_RESET        = 0,
@@ -55,7 +60,8 @@ typedef struct {
 typedef struct {
    struct {
       uint64_t       totalBytes;
-      struct timeval time;
+      //struct timeval time;
+	  clock_t		time;
    } first, prev, current;
 
    double totalTime;
@@ -92,8 +98,7 @@ typedef struct {
 #define FTDI_LOG_PACKET_SIZE      9     // 512 == 1 << 9
 #define FTDI_HEADER_SIZE          2
 
-typedef int (FTDIStreamCallback)(uint8_t *buffer, int length,
-                                 FTDIProgressInfo *progress, void *userdata);
+typedef int (FTDIStreamCallback)(uint8_t *buffer, int length, FTDIProgressInfo *progress, void *userdata);
 
 
 /*
@@ -103,20 +108,11 @@ typedef int (FTDIStreamCallback)(uint8_t *buffer, int length,
 int FTDIDevice_Open(FTDIDevice *dev);
 void FTDIDevice_Close(FTDIDevice *dev);
 int FTDIDevice_Reset(FTDIDevice *dev);
-
-int FTDIDevice_SetMode(FTDIDevice *dev, FTDIInterface interface,
-                       FTDIBitmode mode, uint8_t pinDirections,
-                       int baudRate);
-
-int FTDIDevice_Write(FTDIDevice *dev, FTDIInterface interface,
-                     uint8_t *data, size_t length, bool async);
-
+int FTDIDevice_SetMode(FTDIDevice *dev, FTDIInterface interface, FTDIBitmode mode, uint8_t pinDirections, int baudRate);
+int FTDIDevice_Write(FTDIDevice *dev, FTDIInterface interface, uint8_t *data, unsigned int length, bool async);
 int FTDIDevice_WriteByteSync(FTDIDevice *dev, FTDIInterface interface, uint8_t byte);
 int FTDIDevice_ReadByteSync(FTDIDevice *dev, FTDIInterface interface, uint8_t *byte);
-
-int FTDIDevice_ReadStream(FTDIDevice *dev, FTDIInterface interface,
-                          FTDIStreamCallback *callback, void *userdata,
-                          int packetsPerTransfer, int numTransfers);
+int FTDIDevice_ReadStream(FTDIDevice *dev, FTDIInterface interface, FTDIStreamCallback *callback, void *userdata, int packetsPerTransfer, int numTransfers);
 
 
 #endif /* __FASTFTDI_H */

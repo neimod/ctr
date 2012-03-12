@@ -36,11 +36,11 @@
  * THE SOFTWARE.
  */
 
-#include "fpgaconfig.h"
-#include "bit_file.h"
-#include <unistd.h>
 #include <stdio.h>
 #include <string.h>
+#include "fpgaconfig.h"
+#include "bit_file.h"
+#include "utils.h"
 
 #define CONFIG_BIT_RATE    4000000   // 4 MB/s (mostly arbitrary)
 
@@ -161,7 +161,7 @@ ConfigBegin(FTDIDevice *dev)
     return err;
 
   // Short delay while the FPGA initializes
-  usleep(10000);
+  mssleep(10);
 
   fprintf(stderr, "FPGA: sending configuration bitstream\n");
 

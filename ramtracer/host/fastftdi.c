@@ -27,7 +27,6 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdbool.h>
-#include <aio.h>
 #include <errno.h>
 #include <stdio.h>
 #include "fastftdi.h"
@@ -40,8 +39,7 @@ typedef struct {
 } FTDIStreamState;
 
 
-static int
-DeviceInit(FTDIDevice *dev)
+static int DeviceInit(FTDIDevice *dev)
 {
   int err, interface;
 
@@ -70,8 +68,7 @@ DeviceInit(FTDIDevice *dev)
 }
 
 
-int
-FTDIDevice_Open(FTDIDevice *dev)
+int FTDIDevice_Open(FTDIDevice *dev)
 {
   int err;
 
@@ -81,46 +78,36 @@ FTDIDevice_Open(FTDIDevice *dev)
     return err;
   }
 
-  libusb_set_debug(dev->libusb, 2);
+  //libusb_set_debug(dev->libusb, 2);
 
-  dev->handle = libusb_open_device_with_vid_pid(dev->libusb,
-						TWLFPGA_VENDOR,
-						TWLFPGA_PRODUCT);
+  dev->handle = libusb_open_device_with_vid_pid(dev->libusb, TWLFPGA_VENDOR, TWLFPGA_PRODUCT);
 
-  if (!dev->handle) {
-    dev->handle = libusb_open_device_with_vid_pid(dev->libusb,
-						  FTDI_VENDOR,
-						  FTDI_PRODUCT_FT2232H);
-  }
-  if (!dev->handle) {
-    dev->handle = libusb_open_device_with_vid_pid(dev->libusb,
-						  TEST_VENDOR,
-						  TEST_PRODUCT);
-  }
-  if (!dev->handle) {
-    dev->handle = libusb_open_device_with_vid_pid(dev->libusb,
-						CTRFPGA_VENDOR,
-						CTRFPGA_PRODUCT);
-  }
+  if (!dev->handle)
+	dev->handle = libusb_open_device_with_vid_pid(dev->libusb, FTDI_VENDOR, FTDI_PRODUCT_FT2232H);
+ 
+  if (!dev->handle) 
+    dev->handle = libusb_open_device_with_vid_pid(dev->libusb, TEST_VENDOR, TEST_PRODUCT);
+  
+  if (!dev->handle) 
+    dev->handle = libusb_open_device_with_vid_pid(dev->libusb, CTRFPGA_VENDOR, CTRFPGA_PRODUCT);
+ 
 
-  if (!dev->handle) {
+  if (!dev->handle)
     return LIBUSB_ERROR_NO_DEVICE;
-  }
+ 
 
   return DeviceInit(dev);
 }
 
 
-void
-FTDIDevice_Close(FTDIDevice *dev)
+void FTDIDevice_Close(FTDIDevice *dev)
 {
   libusb_close(dev->handle);
   libusb_exit(dev->libusb);
 }
 
 
-int
-FTDIDevice_Reset(FTDIDevice *dev)
+int FTDIDevice_Reset(FTDIDevice *dev)
 {
   int err;
 
@@ -132,8 +119,7 @@ FTDIDevice_Reset(FTDIDevice *dev)
 }
 
 
-int
-FTDIDevice_SetMode(FTDIDevice *dev, FTDIInterface interface,
+int FTDIDevice_SetMode(FTDIDevice *dev, FTDIInterface interface,
                    FTDIBitmode mode, uint8_t pinDirections,
                    int baudRate)
 {
@@ -174,6 +160,8 @@ FTDIDevice_SetMode(FTDIDevice *dev, FTDIInterface interface,
     if (err)
       return err;
   }
+
+  return 0;
 }
 
 
@@ -181,8 +169,7 @@ FTDIDevice_SetMode(FTDIDevice *dev, FTDIInterface interface,
  * Internal callback for cleaning up async writes.
  */
 
-static void
-WriteAsyncCallback(struct libusb_transfer *transfer)
+static void LIBUSB_CALL WriteAsyncCallback(struct libusb_transfer *transfer)
 {
    free(transfer->buffer);
    libusb_free_transfer(transfer);
@@ -194,9 +181,7 @@ WriteAsyncCallback(struct libusb_transfer *transfer)
  * Async writes have no completion callback, they finish 'eventually'.
  */
 
-int
-FTDIDevice_Write(FTDIDevice *dev, FTDIInterface interface,
-                 uint8_t *data, size_t length, bool async)
+int FTDIDevice_Write(FTDIDevice *dev, FTDIInterface interface, uint8_t *data, unsigned int length, bool async)
 {
    int err;
 
@@ -232,15 +217,13 @@ FTDIDevice_Write(FTDIDevice *dev, FTDIInterface interface,
 }
 
 
-int
-FTDIDevice_WriteByteSync(FTDIDevice *dev, FTDIInterface interface, uint8_t byte)
+int FTDIDevice_WriteByteSync(FTDIDevice *dev, FTDIInterface interface, uint8_t byte)
 {
    return FTDIDevice_Write(dev, interface, &byte, sizeof byte, false);
 }
 
 
-int
-FTDIDevice_ReadByteSync(FTDIDevice *dev, FTDIInterface interface, uint8_t *byte)
+int FTDIDevice_ReadByteSync(FTDIDevice *dev, FTDIInterface interface, uint8_t *byte)
 {
   /*
    * This is a simplified synchronous read, intended for bit-banging mode.
@@ -277,11 +260,10 @@ FTDIDevice_ReadByteSync(FTDIDevice *dev, FTDIInterface interface, uint8_t *byte)
  * Split it into packets and invoke the callbacks.
  */
 
-static void
-ReadStreamCallback(struct libusb_transfer *transfer)
+static void LIBUSB_CALL ReadStreamCallback(struct libusb_transfer *transfer)
 {
    FTDIStreamState *state = transfer->user_data;
-   int err;
+
 
    if (state->result == 0) {
       if (transfer->status == LIBUSB_TRANSFER_COMPLETED) {
@@ -322,10 +304,11 @@ ReadStreamCallback(struct libusb_transfer *transfer)
 }
 
 
-static double
-TimevalDiff(const struct timeval *a, const struct timeval *b)
+static double TimevalDiff(const clock_t *a, const clock_t *b)
 {
-   return (a->tv_sec - b->tv_sec) + 1e-6 * (a->tv_usec - b->tv_usec);
+	double clockdiff = *a - *b;
+
+	return clockdiff / CLOCKS_PER_SEC;
 }
 
 
@@ -341,10 +324,7 @@ TimevalDiff(const struct timeval *a, const struct timeval *b)
  */
 
 
-int
-FTDIDevice_ReadStream(FTDIDevice *dev, FTDIInterface interface,
-                      FTDIStreamCallback *callback, void *userdata,
-                      int packetsPerTransfer, int numTransfers)
+int FTDIDevice_ReadStream(FTDIDevice *dev, FTDIInterface interface, FTDIStreamCallback *callback, void *userdata, int packetsPerTransfer, int numTransfers)
 {
    struct libusb_transfer **transfers;
    FTDIStreamState state = { callback, userdata };
@@ -392,13 +372,13 @@ FTDIDevice_ReadStream(FTDIDevice *dev, FTDIInterface interface,
     * Run the transfers, and periodically assess progress.
     */
 
-   gettimeofday(&state.progress.first.time, NULL);
+   state.progress.first.time = clock();
 
    do {
       FTDIProgressInfo  *progress = &state.progress;
       const double progressInterval = 0.1;
       struct timeval timeout = { 0, 10000 };
-      struct timeval now;
+      clock_t now;
 
       int err = libusb_handle_events_timeout(dev->libusb, &timeout);
       if (!state.result) {
@@ -406,7 +386,7 @@ FTDIDevice_ReadStream(FTDIDevice *dev, FTDIInterface interface,
       }
 	   	   
       // If enough time has elapsed, update the progress
-      gettimeofday(&now, NULL);
+	  now = clock();
       if (TimevalDiff(&now, &progress->current.time) >= progressInterval) {
 
          progress->current.time = now;
