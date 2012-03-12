@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <string.h>
 #include "hw_buffer.h"
 
 unsigned int HW_FillBuffer(HWBuffer* node, unsigned char* buffer, unsigned int size)

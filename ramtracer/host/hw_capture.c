@@ -49,7 +49,7 @@ void HW_CaptureBegin(HWCapture* capture, FILE* outputFile)
 	if (outputFile == 0)
 		return;
 
-	capture->mutex = PTHREAD_MUTEX_INITIALIZER;
+	pthread_mutex_init(&capture->mutex, 0);
 	capture->running = 1;
 
 	err = pthread_create(&capture->thread, NULL, HW_CaptureThread, capture);
@@ -77,6 +77,8 @@ void HW_CaptureFinish(HWCapture* capture)
 		perror("error stopping capture thread");
 		exit(1);
 	}
+	
+	pthread_mutex_destroy(&capture->mutex);
 }
 	
 
