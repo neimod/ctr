@@ -387,27 +387,20 @@ int FTDIDevice_ReadStream(FTDIDevice *dev, FTDIInterface interface, FTDIStreamCa
       // If enough time has elapsed, update the progress
 	  gettimeofday(&now, NULL);
       if (TimevalDiff(&now, &progress->current.time) >= progressInterval) {
+		double currentTime;
 
-         progress->current.time = now;
 
-         if (progress->prev.totalBytes) {
-            // We have enough information to calculate rates
+		progress->current.time = now;
 
-            double currentTime;
+		progress->totalTime = TimevalDiff(&progress->current.time, &progress->first.time);
+		currentTime = TimevalDiff(&progress->current.time, &progress->prev.time);
 
-            progress->totalTime = TimevalDiff(&progress->current.time,
-                                              &progress->first.time);
-            currentTime = TimevalDiff(&progress->current.time,
-                                      &progress->prev.time);
+		progress->totalRate = progress->current.totalBytes / progress->totalTime;
+		progress->currentRate = (progress->current.totalBytes - progress->prev.totalBytes) / currentTime;
 
-            progress->totalRate = progress->current.totalBytes / progress->totalTime;
-            progress->currentRate = (progress->current.totalBytes -
-                                     progress->prev.totalBytes) / currentTime;
-         }
-
-         state.result = state.callback(NULL, 0, progress, state.userdata);
-         progress->prev = progress->current;
-      }
+		state.result = state.callback(NULL, 0, progress, state.userdata);
+		progress->prev = progress->current;
+	  }
    } while (!state.result);
 
    /*

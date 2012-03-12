@@ -31,6 +31,7 @@
 #include "hw_main.h"
 #include "hw_capture.h"
 #include "fpgaconfig.h"
+#include "utils.h"
 
 #ifdef _WIN32
 	#define PACKETS_PER_TRANSFER 8
@@ -151,7 +152,7 @@ static int HW_ReadCallback(uint8_t *buffer, int length, FTDIProgressInfo *progre
 
 	if (progress) 
 	{
-		double seconds = ((double)clock()) / CLOCKS_PER_SEC;
+		double seconds = progress->totalTime;
 		double mb = progress->current.totalBytes / (1024.0 * 1024.0);
 		double mbcomp = capture.compressedsize / (1024.0 * 1024.0);
 
