@@ -30,6 +30,7 @@
 #include <errno.h>
 #include <stdio.h>
 #include "fastftdi.h"
+#include "utils.h"
 
 typedef struct {
    FTDIStreamCallback *callback;
@@ -304,11 +305,9 @@ static void LIBUSB_CALL ReadStreamCallback(struct libusb_transfer *transfer)
 }
 
 
-static double TimevalDiff(const clock_t *a, const clock_t *b)
+static double TimevalDiff(const struct timeval *a, const struct timeval *b)
 {
-	double clockdiff = *a - *b;
-
-	return clockdiff / CLOCKS_PER_SEC;
+   return (a->tv_sec - b->tv_sec) + 1e-6 * (a->tv_usec - b->tv_usec);
 }
 
 
@@ -372,13 +371,13 @@ int FTDIDevice_ReadStream(FTDIDevice *dev, FTDIInterface interface, FTDIStreamCa
     * Run the transfers, and periodically assess progress.
     */
 
-   state.progress.first.time = clock();
+    gettimeofday(&state.progress.first.time, NULL);
 
    do {
       FTDIProgressInfo  *progress = &state.progress;
       const double progressInterval = 0.1;
       struct timeval timeout = { 0, 10000 };
-      clock_t now;
+      struct timeval now;
 
       int err = libusb_handle_events_timeout(dev->libusb, &timeout);
       if (!state.result) {
@@ -386,7 +385,7 @@ int FTDIDevice_ReadStream(FTDIDevice *dev, FTDIInterface interface, FTDIStreamCa
       }
 	   	   
       // If enough time has elapsed, update the progress
-	  now = clock();
+	  gettimeofday(&now, NULL);
       if (TimevalDiff(&now, &progress->current.time) >= progressInterval) {
 
          progress->current.time = now;

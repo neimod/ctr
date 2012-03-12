@@ -60,8 +60,7 @@ typedef struct {
 typedef struct {
    struct {
       uint64_t       totalBytes;
-      //struct timeval time;
-	  clock_t		time;
+      struct timeval time;
    } first, prev, current;
 
    double totalTime;
