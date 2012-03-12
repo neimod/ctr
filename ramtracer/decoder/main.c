@@ -301,7 +301,7 @@ int processsample(ramcontext* context, unsigned char* sampledata)
 
 
 	fix_data_order(&mask, sampledata+3);
-	fix_data_order_more(sampledata+3);
+	//fix_data_order_more(sampledata+3);
 
 
 	switch( (control >> 2) & 7 )
