@@ -1,8 +1,6 @@
 /*
- * hw_main.h -  Main functionality for talking to the 3DS RAM
- *               tracing/injecting hardware over USB.
+ * hw_config.h - Functionality for configuring the RAM tracer.
  *
- * Copyright (C) 2009 Micah Dowty
  * Copyright (C) 2012 neimod
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -24,18 +22,32 @@
  * THE SOFTWARE.
  */
 
-#ifndef __HW_COMMON_H_
-#define __HW_COMMON_H_
+#ifndef __HW_CONFIG_H_
+#define __HW_CONFIG_H_
 
 #include "fastftdi.h"
 
-
 /*
- * Public
+ * HWConfig --  Worker structure for containing a complete configuration stream.
  */
 
-void HW_Init(FTDIDevice *dev, const char *bitstream);
-void HW_Trace(FTDIDevice *dev, const char *filename);
-void HW_Patch();
 
-#endif // __HW_COMMON_H_
+typedef struct
+{
+	unsigned char* data;
+	unsigned int size;
+	unsigned int capacity;
+} HWConfig;
+
+
+/*
+ * Public functions
+ */
+
+void HW_ConfigInit(HWConfig* config);
+void HW_ConfigDestroy(HWConfig* config);
+void HW_ConfigAddressRead(HWConfig* config, unsigned int address);
+void HW_ConfigAddressWrite(HWConfig* config, unsigned int address, unsigned int value);
+void HW_ConfigDevice(FTDIDevice* dev, HWConfig* config);
+
+#endif // __HW_CONFIG_H_

@@ -57,6 +57,8 @@ int main(int argc, char **argv)
    FTDIDevice dev;
    int err, c;
 
+
+
    while (1) 
    {
       int option_index;
@@ -100,6 +102,8 @@ int main(int argc, char **argv)
 
 
    HW_Init(&dev, bitstream);
+
+   HW_Patch(&dev, "patch.bin");
    HW_Trace(&dev, tracefile);
 
    FTDIDevice_Close(&dev);

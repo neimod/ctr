@@ -30,6 +30,7 @@
 
 #include "hw_main.h"
 #include "hw_capture.h"
+#include "hw_patch.h"
 #include "fpgaconfig.h"
 #include "utils.h"
 
@@ -51,6 +52,7 @@ static void HW_SigintHandler(int signum);
 FILE* outputFile;
 bool exitRequested;
 HWCapture capture;
+HWPatchContext patchctx;
 
 
 /*
@@ -78,7 +80,29 @@ void HW_Init(FTDIDevice *dev, const char *bitstream)
 	}
 }
 
+void HW_Patch(FTDIDevice *dev, const char *filename) 
+{
+	unsigned char* buffer = 0;
+	FILE* f = 0;
+	unsigned int patchsize = 0;
 
+	f = fopen(filename, "rb");
+	fseek(f, 0, SEEK_END);
+	patchsize = ftell(f);
+	fseek(f, 0, SEEK_SET);
+
+	buffer = malloc(patchsize);
+	fread(buffer, 1, patchsize, f);
+	fclose(f);
+
+	HW_PatchInit(&patchctx);
+
+	HW_AddPatch(&patchctx, 0x06C86C40, buffer, patchsize);
+
+	HW_PatchDevice(&patchctx, dev);
+
+	free(buffer);
+}
 
 /*
  * HW_Trace --

@@ -200,7 +200,15 @@
 				>
 			</File>
 			<File
+				RelativePath=".\hw_config.c"
+				>
+			</File>
+			<File
 				RelativePath=".\hw_main.c"
+				>
+			</File>
+			<File
+				RelativePath=".\hw_patch.c"
 				>
 			</File>
 			<File
@@ -254,7 +262,15 @@
 				>
 			</File>
 			<File
+				RelativePath=".\hw_config.h"
+				>
+			</File>
+			<File
 				RelativePath=".\hw_main.h"
+				>
+			</File>
+			<File
+				RelativePath=".\hw_patch.h"
 				>
 			</File>
 			<File
