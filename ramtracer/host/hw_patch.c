@@ -154,15 +154,15 @@ void HW_PatchDevice(HWPatchContext* ctx, FTDIDevice *dev)
 		HW_ConfigAddressWrite(&config, PATCHCAMMASK, ctx->cam.entries[i].mask);
 		HW_ConfigAddressWrite(&config, PATCHCAMRAM + i, ctx->cam.entries[i].data);
 	}
-
+	
 	for(i=0; i<HWPATCHDATASIZE/8; i++)
 	{
 		unsigned char* data = ctx->content.data + i*8;
 		unsigned int lowerdata;
 		unsigned int upperdata;
 
-		lowerdata = (data[3]<<24) | (data[2]<<16) | (data[1]<<8) | data[0];
-		upperdata = (data[7]<<24) | (data[6]<<16) | (data[5]<<8) | data[4];
+		lowerdata = (data[4]<<24) | (data[5]<<16) | (data[6]<<8) | data[7];
+		upperdata = (data[0]<<24) | (data[1]<<16) | (data[2]<<8) | data[3];
 
 		HW_ConfigAddressWrite(&config, PATCHDATAUPPER, upperdata);
 		HW_ConfigAddressWrite(&config, PATCHDATARAM + i, lowerdata);
@@ -170,5 +170,5 @@ void HW_PatchDevice(HWPatchContext* ctx, FTDIDevice *dev)
 
 	HW_ConfigDevice(dev, &config);
 
-	fprintf(stdout, "Configured patches.\n");
+	fprintf(stdout, "PATCH: Configured patches.\n");
 }
