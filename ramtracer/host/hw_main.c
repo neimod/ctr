@@ -87,6 +87,13 @@ void HW_Patch(FTDIDevice *dev, const char *filename)
 	unsigned int patchsize = 0;
 
 	f = fopen(filename, "rb");
+
+	if (0 == f)
+	{
+		fprintf(stderr, "Unable to open '%s'\n", filename);
+		exit(1);
+	}
+
 	fseek(f, 0, SEEK_END);
 	patchsize = ftell(f);
 	fseek(f, 0, SEEK_SET);
