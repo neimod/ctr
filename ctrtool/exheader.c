@@ -289,6 +289,11 @@ void exheader_print(exheader_context* ctx)
 
 	fprintf(stdout, "Program id:             %016llX\n", getle64(ctx->header.arm11systemlocalcaps.programid));
 	memdump(stdout, "Flags:                  ", ctx->header.arm11systemlocalcaps.flags, 8);
+	fprintf(stdout, "Core version:           0x%X\n", getle32(ctx->header.arm11systemlocalcaps.flags));
+	fprintf(stdout, "System mode:            0x%X\n", (ctx->header.arm11systemlocalcaps.flags[6]>>4)&0xF);
+	fprintf(stdout, "Ideal processor:        %d\n", (ctx->header.arm11systemlocalcaps.flags[6]>>0)&0x3);
+	fprintf(stdout, "Affinity mask:          %d\n", (ctx->header.arm11systemlocalcaps.flags[6]>>2)&0x3);
+	fprintf(stdout, "Main thread priority:   %d\n", ctx->header.arm11systemlocalcaps.flags[7]);
 	// print resource limit descriptor too? currently mostly zeroes...
 	fprintf(stdout, "Ext savedata id:        %016llX\n", getle64(ctx->header.arm11systemlocalcaps.storageinfo.extsavedataid));
 	fprintf(stdout, "System savedata id:     %016llX\n", getle64(ctx->header.arm11systemlocalcaps.storageinfo.systemsavedataid));
