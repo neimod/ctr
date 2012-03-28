@@ -66,10 +66,30 @@ typedef struct
 
 typedef struct
 {
+	u8 descriptors[28][4];
+	u8 reserved[0x10];
+} exheader_arm11kernelcapabilities;
+
+typedef struct
+{
+	u8 descriptors[15];
+	u8 descversion;
+} exheader_arm9accesscontrol;
+
+typedef struct
+{
+	// systemcontrol info {
+	//   coreinfo {
 	exheader_codesetinfo codesetinfo;
 	exheader_dependencylist deplist;
+	//   }
 	exheader_systeminfo systeminfo;
+	// }
+	// accesscontrolinfo {
 	exheader_arm11systemlocalcaps arm11systemlocalcaps;
+	exheader_arm11kernelcapabilities arm11kernelcaps;
+	exheader_arm9accesscontrol arm9accesscontrol;
+	// }
 } exheader_header;
 
 typedef struct

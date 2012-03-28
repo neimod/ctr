@@ -74,15 +74,189 @@ int exheader_process(exheader_context* ctx, u32 actions)
 	return 1;
 }
 
+void exheader_print_arm9accesscontrol(exheader_context* ctx)
+{
+	unsigned int i;
+	unsigned int flags[15*8];
+
+	fprintf(stdout, "ARM9 Desc. version:     0x%X\n", ctx->header.arm9accesscontrol.descversion);
+
+	for(i=0; i<15*8; i++)
+	{
+		if (ctx->header.arm9accesscontrol.descriptors[i/8] & (1<<(i&7)))
+			flags[i] = 1;
+		else
+			flags[i] = 0;
+	}
+
+	fprintf(stdout, "Mount NAND fs:          %s\n", flags[0]? "YES" : "NO");
+	fprintf(stdout, "Mount NAND RO write fs: %s\n", flags[1]? "YES" : "NO");
+	fprintf(stdout, "Mount NAND TWL fs:      %s\n", flags[2]? "YES" : "NO");
+	fprintf(stdout, "Mount NAND W fs:        %s\n", flags[3]? "YES" : "NO");
+	fprintf(stdout, "Mount CARD SPI fs:      %s\n", flags[4]? "YES" : "NO");
+	fprintf(stdout, "Use SDIF3:              %s\n", flags[5]? "YES" : "NO");
+	fprintf(stdout, "Create seed:            %s\n", flags[6]? "YES" : "NO");
+	fprintf(stdout, "Use CARD SPI:           %s\n", flags[7]? "YES" : "NO");
+	fprintf(stdout, "SD Application:         %s\n", flags[8]? "YES" : "NO");
+	fprintf(stdout, "Use Direct SDMC:        %s\n", flags[9]? "YES" : "NO");
+
+	for(i=10; i<15*8; i++)
+	{
+		if (flags[i])
+			fprintf(stdout, "Unknown flag:           %d\n", i);
+	}
+}
+
+void exheader_print_arm11kernelcapabilities(exheader_context* ctx)
+{
+	unsigned int i, j;
+	unsigned int systemcallmask[8];
+	unsigned int unknowndescriptor[28];
+	unsigned int svccount = 0;
+	unsigned int svcmask = 0;
+	unsigned int interrupt[0x7F];
+	unsigned int interruptcount = 0;
+
+	memset(systemcallmask, 0, sizeof(systemcallmask));
+	memset(interrupt, 0, sizeof(interrupt));
+
+	for(i=0; i<28; i++)
+	{
+		unsigned int descriptor = getle32(ctx->header.arm11kernelcaps.descriptors[i]);
+
+		unknowndescriptor[i] = 0;
+
+		if ((descriptor & (0x1f<<27)) == (0x1e<<27))
+			systemcallmask[(descriptor>>24) & 7] = descriptor & 0x00FFFFFF;
+		else if ((descriptor & (0x7f<<25)) == (0x7e<<25))
+			fprintf(stdout, "Kernel release version: %d.%d\n", (descriptor>>8)&0xFF, (descriptor>>0)&0xFF, descriptor);
+		else if ((descriptor & (0xf<<28)) == (0xe<<28))
+		{
+			for(j=0; j<4; j++)
+				interrupt[(descriptor >> (j*7)) & 0x7F] = 1;
+		}
+		else if ((descriptor & (0xff<<24)) == (0xfe<<24))
+			fprintf(stdout, "Handle table size:      0x%X\n", descriptor & 0x3FF);
+		else if ((descriptor & (0xfff<<20)) == (0xffe<<20))
+			fprintf(stdout, "Mapping IO address:     0x%X (%s)\n", (descriptor & 0xFFFFF)<<12, (descriptor&(1<<20))?"RO":"RW");
+		else if ((descriptor & (0x7ff<<21)) == (0x7fc<<21))
+			fprintf(stdout, "Mapping static address: 0x%X (%s)\n", (descriptor & 0x1FFFFF)<<12, (descriptor&(1<<20))?"RO":"RW");
+		else if ((descriptor & (0x1ff<<23)) == (0x1fe<<23))
+		{
+			unsigned int memorytype = (descriptor>>8)&15;
+			fprintf(stdout, "Kernel flags:           \n");
+			fprintf(stdout, " > Allow debug:         %s\n", (descriptor&(1<<0))?"YES":"NO");
+			fprintf(stdout, " > Force debug:         %s\n", (descriptor&(1<<1))?"YES":"NO");
+			fprintf(stdout, " > Allow non-alphanum:  %s\n", (descriptor&(1<<2))?"YES":"NO");
+			fprintf(stdout, " > Shared page writing: %s\n", (descriptor&(1<<3))?"YES":"NO");
+			fprintf(stdout, " > Privilege priority:  %s\n", (descriptor&(1<<4))?"YES":"NO");
+			fprintf(stdout, " > Allow main() args:   %s\n", (descriptor&(1<<5))?"YES":"NO");
+			fprintf(stdout, " > Shared device mem:   %s\n", (descriptor&(1<<6))?"YES":"NO");
+			fprintf(stdout, " > Runnable on sleep:   %s\n", (descriptor&(1<<7))?"YES":"NO");
+			fprintf(stdout, " > Special memory:      %s\n", (descriptor&(1<<12))?"YES":"NO");
+			
+
+			switch(memorytype)
+			{
+			case 1: fprintf(stdout, " > Memory type:         APPLICATION\n"); break;
+			case 2: fprintf(stdout, " > Memory type:         SYSTEM\n"); break;
+			case 3: fprintf(stdout, " > Memory type:         BASE\n"); break;
+			default: fprintf(stdout, " > Memory type:         Unknown (%d)\n", memorytype); break;
+			}
+		}
+		else if (descriptor != 0xFFFFFFFF)
+			unknowndescriptor[i] = 1;
+	}
+
+	fprintf(stdout, "Allowed systemcalls:    ");
+	for(i=0; i<8; i++)
+	{
+		for(j=0; j<24; j++)
+		{
+			svcmask = systemcallmask[i];
+
+			if (svcmask & (1<<j))
+			{
+				unsigned int svcid = i*24+j;
+				if (svccount == 0)
+				{
+					fprintf(stdout, "0x%02X", svcid);
+				}
+				else if ( (svccount & 7) == 0)
+				{
+					fprintf(stdout, "                        ");
+					fprintf(stdout, "0x%02X", svcid);
+				}
+				else
+				{
+					fprintf(stdout, ", 0x%02X", svcid);
+				}
+
+				svccount++;
+				if ( (svccount & 7) == 0)
+				{
+					fprintf(stdout, "\n");
+				}
+			}
+		}
+	}
+	if (svccount & 7)
+		fprintf(stdout, "\n");
+	if (svccount == 0)
+		fprintf(stdout, "none\n");
+
+
+	fprintf(stdout, "Allowed interrupts:     ");
+	for(i=0; i<0x7F; i++)
+	{
+		if (interrupt[i])
+		{
+			if (interruptcount == 0)
+			{
+				fprintf(stdout, "0x%02X", i);
+			}
+			else if ( (interruptcount & 7) == 0)
+			{
+				fprintf(stdout, "                        ");
+				fprintf(stdout, "0x%02X", i);
+			}
+			else
+			{
+				fprintf(stdout, ", 0x%02X", i);
+			}
+
+			interruptcount++;
+			if ( (interruptcount & 7) == 0)
+			{
+				fprintf(stdout, "\n");
+			}
+		}
+	}
+	if (interruptcount & 7)
+		fprintf(stdout, "\n");
+	if (interruptcount == 0)
+		fprintf(stdout, "none\n");
+
+	for(i=0; i<28; i++)
+	{
+		unsigned int descriptor = getle32(ctx->header.arm11kernelcaps.descriptors[i]);
+
+		if (unknowndescriptor[i])
+			fprintf(stdout, "Unknown descriptor:     %08X\n", descriptor);
+	}
+}
+
 void exheader_print(exheader_context* ctx)
 {
 	u32 i;
+	unsigned int enabledsvccounter = 0;
 	char name[9];
 	char service[9];
 	exheader_codesetinfo* codesetinfo = &ctx->header.codesetinfo;
 
 	memset(name, 0, sizeof(name));
 	memcpy(name, codesetinfo->name, 8);
+
 
 	fprintf(stdout, "\nExtended header:\n");
 	fprintf(stdout, "Name:                   %s\n", name);
@@ -120,6 +294,11 @@ void exheader_print(exheader_context* ctx)
 	fprintf(stdout, "System savedata id:     %016llX\n", getle64(ctx->header.arm11systemlocalcaps.storageinfo.systemsavedataid));
 	memdump(stdout, "Access info:            ", ctx->header.arm11systemlocalcaps.storageinfo.accessinfo, 7);
 	fprintf(stdout, "Other attributes:       %02X\n", ctx->header.arm11systemlocalcaps.storageinfo.otherattributes);
+
+	exheader_print_arm11kernelcapabilities(ctx);
+	exheader_print_arm9accesscontrol(ctx);
+
+		
 	
 	for(i=0; i<0x20; i++)
 	{
