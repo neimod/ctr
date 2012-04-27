@@ -122,7 +122,7 @@ void exheader_print_arm11kernelcapabilities(exheader_context* ctx)
 	unsigned int unknowndescriptor[28];
 	unsigned int svccount = 0;
 	unsigned int svcmask = 0;
-	unsigned int interrupt[0x7F];
+	unsigned int interrupt[0x80];
 	unsigned int interruptcount = 0;
 
 	memset(systemcallmask, 0, sizeof(systemcallmask));
