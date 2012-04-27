@@ -103,9 +103,11 @@ typedef struct
 	exheader_header header;
 	ctr_aes_context aes;
 	int compressedflag;
+	int ignoreprogramid;
 } exheader_context;
 
 void exheader_init(exheader_context* ctx);
+void exheader_set_ignoreprogramid(exheader_context* ctx, int enable);
 void exheader_set_file(exheader_context* ctx, FILE* file);
 void exheader_set_offset(exheader_context* ctx, u32 offset);
 void exheader_set_size(exheader_context* ctx, u32 size);

@@ -20,6 +20,7 @@ enum cryptotype
 	CBC
 };
 
+
 typedef struct
 {
 	int actions;
@@ -28,6 +29,7 @@ typedef struct
 	keyset keys;
 	ncch_context ncch;
 	cia_context cia;
+	exheader_context exheader;
 } toolcontext;
 
 static void usage(const char *argv0)
@@ -50,6 +52,7 @@ static void usage(const char *argv0)
 		   "  --commonkey=key    Set common key.\n"
 		   "  --ncchctrkey=key   Set ncchctr key.\n"
 		   "  --showkeys         Show the keys being used.\n"
+		   "  -t, --intype=type	 Specify input file type [ncsd, ncch, exheader]\n"
 		   "CXI/CCI options:\n"
 		   "  -n, --ncch=offs    Specify offset for NCCH header.\n"
 		   "  --exefs=file       Specify ExeFS file path.\n"
@@ -72,7 +75,6 @@ int main(int argc, char* argv[])
 {
 	toolcontext ctx;
 	u8 magic[4];
-
 	char infname[512];
 	int c;
 	u32 ncchoffset = ~0;
@@ -87,6 +89,7 @@ int main(int argc, char* argv[])
 	keyset_init(&tmpkeys);
 	ncch_init(&ctx.ncch);
 	cia_init(&ctx.cia);
+	exheader_init(&ctx.exheader);
 
 	while (1) 
 	{
@@ -114,10 +117,11 @@ int main(int argc, char* argv[])
 			{"showkeys", 0, NULL, 10},
 			{"commonkey", 1, NULL, 11},
 			{"ncchctrkey", 1, NULL, 12},
+			{"intype", 1, NULL, 't'},
 			{NULL},
 		};
 
-		c = getopt_long(argc, argv, "ryxivpk:n:", long_options, &option_index);
+		c = getopt_long(argc, argv, "ryxivpk:n:t:", long_options, &option_index);
 		if (c == -1)
 			break;
 
@@ -153,6 +157,17 @@ int main(int argc, char* argv[])
 
 			case 'k':
 				strncpy(keysetfname, optarg, sizeof(keysetfname));
+			break;
+
+			case 't':
+				if (!strcmp(optarg, "exheader"))
+					ctx.filetype = FILETYPE_EXHEADER;
+				else if (!strcmp(optarg, "ncch"))
+					ctx.filetype = FILETYPE_CXI;
+				else if (!strcmp(optarg, "ncsd"))
+					ctx.filetype = FILETYPE_CCI;
+				else if (!strcmp(optarg, "cia"))
+					ctx.filetype = FILETYPE_CIA;
 			break;
 
 			case 0: ncch_set_exefspath(&ctx.ncch, optarg); break;
@@ -202,30 +217,37 @@ int main(int argc, char* argv[])
 	ncch_load_keys(&ctx.ncch, &ctx.keys);
 	cia_set_file(&ctx.cia, ctx.infile);
 	cia_set_offset(&ctx.cia, 0);
+	exheader_set_file(&ctx.exheader, ctx.infile);
+	exheader_set_offset(&ctx.exheader, 0);
+	exheader_set_ignoreprogramid(&ctx.exheader, 1);
+
 	if (ctx.keys.commonkey.valid)
 		cia_set_commonkey(&ctx.cia, ctx.keys.commonkey.data);
 
 
 
-	fseek(ctx.infile, 0x100, SEEK_SET);
-	fread(&magic, 1, 4, ctx.infile);
-
-	switch(getle32(magic))
+	if (ctx.filetype == FILETYPE_UNKNOWN)
 	{
-		case MAGIC_NCCH:
-			ctx.filetype = FILETYPE_CXI;
-		break;
+		fseek(ctx.infile, 0x100, SEEK_SET);
+		fread(&magic, 1, 4, ctx.infile);
 
-		case MAGIC_NCSD:
-			ctx.filetype = FILETYPE_CCI;
-		break;
+		switch(getle32(magic))
+		{
+			case MAGIC_NCCH:
+				ctx.filetype = FILETYPE_CXI;
+			break;
 
-		default:
-			fseek(ctx.infile, 0, SEEK_SET);
-			fread(magic, 1, 4, ctx.infile);
-			if (getle32(magic) == 0x2020)
-				ctx.filetype = FILETYPE_CIA;
-		break;
+			case MAGIC_NCSD:
+				ctx.filetype = FILETYPE_CCI;
+			break;
+
+			default:
+				fseek(ctx.infile, 0, SEEK_SET);
+				fread(magic, 1, 4, ctx.infile);
+				if (getle32(magic) == 0x2020)
+					ctx.filetype = FILETYPE_CIA;
+			break;
+		}
 	}
 
 	if (ctx.filetype == FILETYPE_UNKNOWN)
@@ -261,6 +283,10 @@ int main(int argc, char* argv[])
 
 		case FILETYPE_CIA:
 			cia_process(&ctx.cia, ctx.actions);
+		break;
+
+		case FILETYPE_EXHEADER:
+			exheader_process(&ctx.exheader, ctx.actions);
 		break;
 	}
 	

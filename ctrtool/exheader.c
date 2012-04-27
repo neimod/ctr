@@ -46,6 +46,11 @@ int exheader_get_compressedflag(exheader_context* ctx)
 	return ctx->compressedflag;
 }
 
+void exheader_set_ignoreprogramid(exheader_context* ctx, int enable)
+{
+	ctx->ignoreprogramid = enable;
+}
+
 
 int exheader_process(exheader_context* ctx, u32 actions)
 {
@@ -60,10 +65,13 @@ int exheader_process(exheader_context* ctx, u32 actions)
 	if (ctx->header.codesetinfo.flags.flag & 1)
 		ctx->compressedflag = 1;
 
-	if (memcmp(ctx->header.arm11systemlocalcaps.programid, ctx->programid, 8))
+	if (!ctx->ignoreprogramid)
 	{
-		fprintf(stderr, "Error, program id mismatch. Wrong key?\n");
-		return 0;
+		if (memcmp(ctx->header.arm11systemlocalcaps.programid, ctx->programid, 8))
+		{
+			fprintf(stderr, "Error, program id mismatch. Wrong key?\n");
+			return 0;
+		}
 	}
 
 	if (actions & InfoFlag)
