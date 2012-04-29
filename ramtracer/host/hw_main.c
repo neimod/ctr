@@ -242,7 +242,7 @@ void HW_LoadPatchFile(const char* filename)
 					unsigned int patchsize;
 					unsigned int patchaddress;
 					unsigned char* patchdata;
-					switch(tag)
+					switch(tag) 
 					{
 						case PATCHTAG_WRITETRIGGER: 
 							triggeraddress = buffer_readle32(buffer, &bufferpos, buffersize) & 0x0FFFFFFF;
