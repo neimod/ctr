@@ -44,15 +44,26 @@
 
 #define CONFIG_BIT_RATE    4000000   // 4 MB/s (mostly arbitrary)
 
-#define FPGA_PART          "3s500epq208"
+//#define FPGA_PART          "3s500epq208"
 
-#define PORTB_CSI_BIT      (1 << 0)
-#define PORTB_RDWR_BIT     (1 << 1)
-#define PORTB_DONE_BIT     (1 << 2)
-#define PORTB_PROG_BIT     (1 << 3)
+//#define PORTB_CSI_BIT      (1 << 0)
+//#define PORTB_RDWR_BIT     (1 << 1)
+//#define PORTB_DONE_BIT     (1 << 2)
+//#define PORTB_PROG_BIT     (1 << 3)
 
 #define NUM_EXTRA_CLOCKS   512
 #define BLOCK_SIZE         (16 * 1024)
+
+
+static unsigned char shuffle(unsigned int order, unsigned char c)
+{
+	unsigned char out = 0;
+	int i;
+	for(i=0; i<8; i++) {
+		out |= ((c>>((order >> (i*4)) & 0xF))&1) << i;
+	}
+	return out;
+}
 
 
 static int
@@ -88,7 +99,7 @@ ConfigSendBuffer(FTDIDevice *dev, uint8_t *data, size_t length)
       chunk = BLOCK_SIZE;
 
     for (i = 0; i < chunk; i++)
-      buffer[i] = bitReverse[data[i]];
+      buffer[i] = shuffle(dev->datamask, data[i]);
 
     data += chunk;
     length -= chunk;
@@ -136,7 +147,7 @@ ConfigBegin(FTDIDevice *dev)
 
   err = FTDIDevice_SetMode(dev, FTDI_INTERFACE_B,
 			   FTDI_BITMODE_BITBANG,
-			   PORTB_CSI_BIT | PORTB_RDWR_BIT | PORTB_PROG_BIT,
+			   dev->CSI_BIT | dev->RDWR_BIT | dev->PROG_BIT,
 			   CONFIG_BIT_RATE);
   if (err)
     return err;
@@ -146,17 +157,17 @@ ConfigBegin(FTDIDevice *dev)
    */
 
   err = FTDIDevice_WriteByteSync(dev, FTDI_INTERFACE_B,
-				 PORTB_CSI_BIT | PORTB_RDWR_BIT | PORTB_PROG_BIT);
+				 dev->CSI_BIT | dev->RDWR_BIT | dev->PROG_BIT);
   if (err)
     return err;
 
   err = FTDIDevice_WriteByteSync(dev, FTDI_INTERFACE_B,
-				 PORTB_CSI_BIT | PORTB_RDWR_BIT);
+				 dev->CSI_BIT | dev->RDWR_BIT);
   if (err)
     return err;
 
   // Into programming mode (CSI/RDWR low, PROG high)
-  err = FTDIDevice_WriteByteSync(dev, FTDI_INTERFACE_B, PORTB_PROG_BIT);
+  err = FTDIDevice_WriteByteSync(dev, FTDI_INTERFACE_B, dev->PROG_BIT);
   if (err)
     return err;
 
@@ -169,7 +180,7 @@ ConfigBegin(FTDIDevice *dev)
   err = FTDIDevice_ReadByteSync(dev, FTDI_INTERFACE_B, &byte);
   if (err)
     return err;
-  if (byte & PORTB_DONE_BIT) {
+  if (byte & dev->DONE_BIT) {
     fprintf(stderr, "FPGA: DONE pin stuck high? (GPIO=%02x)\n", byte);
     return -1;
   }
@@ -204,7 +215,7 @@ ConfigEnd(FTDIDevice *dev)
   if (err)
     return err;
 
-  if (byte & PORTB_DONE_BIT) {
+  if (byte & dev->DONE_BIT) {
     fprintf(stderr, "FPGA: configured\n");
     return 0;
   } else {
@@ -226,9 +237,10 @@ FPGAConfig_LoadFile(FTDIDevice *dev, const char *filename)
     return -1;
   }
 
-  if (strcmp(bf->part_number, FPGA_PART)) {
+  if (strcmp(bf->part_number, dev->devicemask)) {
     fprintf(stderr, "FPGA: Bitstream has incorrect part number '%s'."
-            " Our hardware is '%s'.\n", bf->part_number, FPGA_PART);
+            " Our hardware is '%s'.\n", bf->part_number, dev->devicemask);
+    exit(1);	  
     goto done;
   }
 

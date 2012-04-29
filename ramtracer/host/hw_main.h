@@ -34,8 +34,10 @@
  * Public
  */
 
-void HW_Init(FTDIDevice *dev, const char *bitstream);
+void HW_Init();
+void HW_LoadPatchFile(const char* filename);
+void HW_LoadFlatPatchFile(unsigned int address, const char* filename);
+void HW_Setup(FTDIDevice *dev, const char *bitstream);
 void HW_Trace(FTDIDevice *dev, const char *filename);
-void HW_Patch();
 
 #endif // __HW_COMMON_H_

@@ -56,19 +56,22 @@ int main(int argc, char **argv)
    const char *tracefile = NULL;
    FTDIDevice dev;
    int err, c;
-
-
+	
+   HW_Init();
 
    while (1) 
    {
       int option_index;
+	  char* pchr;
       static struct option long_options[] = 
 	  {
          {"bitstream", 1, NULL, 'b'},
+         {"patch", 1, NULL, 'p'},
+         {"flatpatch", 1, NULL, 'l'},		  
          {NULL},
       };
 
-      c = getopt_long(argc, argv, "b:", long_options, &option_index);
+      c = getopt_long(argc, argv, "b:p:l:", long_options, &option_index);
       if (c == -1)
          break;
 
@@ -77,6 +80,20 @@ int main(int argc, char **argv)
       case 'b':
          bitstream = strdup(optarg);
          break;
+	  case 'p':
+		 HW_LoadPatchFile(optarg);
+		 break;
+	  case 'l':
+		  {
+			  char* patchfilename = 0;
+			  unsigned int patchaddress = strtoul(optarg, &patchfilename, 0);
+			  
+			  if (patchfilename != optarg)
+				  patchfilename++;
+			  
+ 			  HW_LoadFlatPatchFile(patchaddress, patchfilename);
+		  }
+		 break;
       default:
          usage(argv[0]);
       }
@@ -101,9 +118,7 @@ int main(int argc, char **argv)
    }
 
 
-   HW_Init(&dev, bitstream);
-
-   HW_Patch(&dev, "patch.bin");
+   HW_Setup(&dev, bitstream);
    HW_Trace(&dev, tracefile);
 
    FTDIDevice_Close(&dev);

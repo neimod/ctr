@@ -80,7 +80,13 @@ int FTDIDevice_Open(FTDIDevice *dev)
   }
 
   //libusb_set_debug(dev->libusb, 2);
-
+  dev->datamask = 0x01234567;
+  dev->CSI_BIT = (1<<0);
+  dev->RDWR_BIT = (1<<1);
+  dev->DONE_BIT = (1<<2);
+  dev->PROG_BIT = (1<<3);	
+  dev->devicemask = "3s500epq208";
+  dev->patchcapability = 0;
   dev->handle = libusb_open_device_with_vid_pid(dev->libusb, TWLFPGA_VENDOR, TWLFPGA_PRODUCT);
 
   if (!dev->handle)
@@ -89,9 +95,22 @@ int FTDIDevice_Open(FTDIDevice *dev)
   if (!dev->handle) 
     dev->handle = libusb_open_device_with_vid_pid(dev->libusb, TEST_VENDOR, TEST_PRODUCT);
   
-  if (!dev->handle) 
+  if (!dev->handle) {
     dev->handle = libusb_open_device_with_vid_pid(dev->libusb, CTRFPGA_VENDOR, CTRFPGA_PRODUCT);
- 
+	dev->patchcapability = 1;
+  }
+
+  if (!dev->handle) {
+    dev->handle = libusb_open_device_with_vid_pid(dev->libusb, CTRFPGA2_VENDOR, CTRFPGA2_PRODUCT);
+	dev->datamask = 0x45601237;
+	dev->CSI_BIT = (1<<0);
+	dev->RDWR_BIT = (1<<3);
+	dev->DONE_BIT = (1<<2);
+	dev->PROG_BIT = (1<<1);
+	dev->devicemask = "3s400afg400";
+	dev->patchcapability = 1;
+  }
+	
 
   if (!dev->handle)
     return LIBUSB_ERROR_NO_DEVICE;

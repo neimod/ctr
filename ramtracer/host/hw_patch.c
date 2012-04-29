@@ -28,12 +28,17 @@
 #include "hw_patch.h"
 #include "fastftdi.h"
 #include "hw_config.h"
+#include "elf.h"
 
 #define PATCHOFFSETRAM		0x1000
 #define PATCHDATARAM		0x2000
 #define PATCHCAMRAM			0x3000
 #define PATCHDATAUPPER		0x0
 #define PATCHCAMMASK		0x1
+#define PATCHTRIGGER		0x2
+#define PATCHTRIGGERBYPASS	0x3
+#define PATCHTRIGGERDATALOWER	0x4
+#define PATCHTRIGGERDATAUPPER	0x5
 
 
 void HW_PatchInit(HWPatchContext* ctx)
@@ -49,12 +54,25 @@ void HW_PatchInit(HWPatchContext* ctx)
 
 		ctx->offset.entries[i] = 0;
 	}
+	
+	ctx->trigger.address = 0;
+	ctx->trigger.count = 0;
+	ctx->trigger.bypassaddress = 0x7FFFFF;
+	ctx->trigger.datalo = 0x12345678;
+	ctx->trigger.datahi = 0x12345677;
 
 	memset(ctx->content.data, 0, HWPATCHDATASIZE);
 
 	ctx->currententryindex = 0;
-	ctx->currentdataoffset = 0;
+	ctx->currentdatawordindex = 0;
+	ctx->mode = 0;
 }
+
+void HW_SetPatchingMode(HWPatchContext* ctx, int enabled)
+{
+	ctx->mode = enabled;
+}
+
 
 // Sets an address range of a RAM address that needs to be patched, translated into a patch CAM entry
 void HW_SetPatchAddress(HWPatchContext* ctx, unsigned int index, unsigned int address, unsigned int mask)
@@ -72,13 +90,13 @@ void HW_SetPatchAddress(HWPatchContext* ctx, unsigned int index, unsigned int ad
 void HW_SetPatchOffset(HWPatchContext* ctx, unsigned int index, unsigned int offset, unsigned int address)
 {
 	unsigned short hwoffset = offset - address;
-	
+		
 	ctx->offset.entries[index] = hwoffset;
 }
 
-void HW_SetPatchData(HWPatchContext* ctx, unsigned int offset, unsigned char* data, unsigned int size)
+void HW_SetPatchData(HWPatchContext* ctx, unsigned int wordoffset, unsigned char* data, unsigned int size)
 {
-	memcpy(ctx->content.data + offset, data, size);
+	memcpy(ctx->content.data + wordoffset*8, data, size);
 }
 
 
@@ -105,7 +123,7 @@ void HW_AddPatch(HWPatchContext* ctx, unsigned int address, unsigned char* data,
 	while (words) 
 	{
 		unsigned int blockMask = 0x00ffffff;
-		unsigned int blockOffset = ctx->currentdataoffset;
+		unsigned int blockWordOffset = ctx->currentdatawordindex;
 		unsigned int blockIndex = ctx->currententryindex;
 		unsigned int blockWords;
 		unsigned int blockSize;
@@ -124,19 +142,51 @@ void HW_AddPatch(HWPatchContext* ctx, unsigned int address, unsigned char* data,
 		blockWords = blockMask + 1;
 		blockSize = blockWords * 8;
 
-		fprintf(stdout, "PATCH: CAM entry %02d, addr=%08x mask=%08x offset=%04x size=%08x\n", blockIndex, address, blockMask, blockOffset, blockSize);
+		//fprintf(stdout, "PATCH: CAM entry %02d, addr=%08x mask=%08x offset=%04x size=%08x\n", blockIndex, address, blockMask, blockWordOffset, blockSize);
 
 		HW_SetPatchAddress(ctx, blockIndex, address, blockMask);
-		HW_SetPatchOffset(ctx, blockIndex, blockOffset, address);
-		HW_SetPatchData(ctx, blockOffset, data, blockSize);
+		HW_SetPatchOffset(ctx, blockIndex, blockWordOffset, address);
+		HW_SetPatchData(ctx, blockWordOffset, data, blockSize);
 
 		words -= blockWords;
 		address += blockWords;
 		data += blockSize;
 
-		ctx->currentdataoffset += blockSize;
+		ctx->currentdatawordindex += blockWords;
 		ctx->currententryindex++;
 	}
+}
+
+void HW_SetPatchWriteTrigger(HWPatchContext* ctx, unsigned int address, unsigned int count, unsigned char* data)
+{
+	if (count >= 256)
+	{
+		fprintf(stderr, "PATCH: Patch trigger count must not be greater than 255.\n");
+		exit(1);
+	}
+	
+	if (address & 7)
+	{
+		fprintf(stderr, "PATCH: Patch trigger address must be aligned to 8 bytes.\n");
+		exit(1);
+	}
+	
+	ctx->trigger.address = (address/8) & 0x00FFFFFF;
+	ctx->trigger.count = count & 0xFF;
+	
+	ctx->trigger.datalo = (data[4]<<24) | (data[5]<<16) | (data[6]<<8) | data[7];
+	ctx->trigger.datahi = (data[0]<<24) | (data[1]<<16) | (data[2]<<8) | data[3];
+}
+
+void HW_SetPatchTriggerBypass(HWPatchContext* ctx, unsigned int address)
+{
+	if (address & 7)
+	{
+		fprintf(stderr, "PATCH: Patch trigger bypass address must be aligned to 8 bytes.\n");
+		exit(1);
+	}
+	
+	ctx->trigger.bypassaddress = (address/8) & 0xFFFFFF;
 }
 
 void HW_PatchDevice(HWPatchContext* ctx, FTDIDevice *dev)
@@ -167,8 +217,16 @@ void HW_PatchDevice(HWPatchContext* ctx, FTDIDevice *dev)
 		HW_ConfigAddressWrite(&config, PATCHDATAUPPER, upperdata);
 		HW_ConfigAddressWrite(&config, PATCHDATARAM + i, lowerdata);
 	}
+	
+	HW_ConfigAddressWrite(&config, PATCHTRIGGER, (ctx->trigger.count<<24) | ctx->trigger.address);
+	HW_ConfigAddressWrite(&config, PATCHTRIGGERBYPASS, ctx->trigger.bypassaddress);
+	HW_ConfigAddressWrite(&config, PATCHTRIGGERDATALOWER, ctx->trigger.datalo);	
+	HW_ConfigAddressWrite(&config, PATCHTRIGGERDATAUPPER, ctx->trigger.datahi);
 
 	HW_ConfigDevice(dev, &config);
 
 	fprintf(stdout, "PATCH: Configured patches.\n");
 }
+
+
+
