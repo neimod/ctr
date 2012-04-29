@@ -117,7 +117,6 @@ int main(int argc, char **argv)
       return 1;
    }
 
-
    HW_Setup(&dev, bitstream);
    HW_Trace(&dev, tracefile);
 

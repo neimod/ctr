@@ -57,7 +57,7 @@ void HW_PatchInit(HWPatchContext* ctx)
 	
 	ctx->trigger.address = 0;
 	ctx->trigger.count = 0;
-	ctx->trigger.bypassaddress = 0x7FFFFF;
+	ctx->trigger.bypassaddress = 0xFFFFFF;
 	ctx->trigger.datalo = 0x12345678;
 	ctx->trigger.datahi = 0x12345677;
 

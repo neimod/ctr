@@ -62,7 +62,7 @@ static unsigned char* buffer_readdata(unsigned char* buffer, unsigned int* buffe
 	unsigned char* p = buffer + *bufferpos;
 	if (*bufferpos+datasize > buffersize)
 	{
-		perror("buffer ouf of bounds");
+		perror("buffer out of bounds");
 		exit(1);
 	}
 	*bufferpos += datasize;
@@ -253,7 +253,7 @@ void HW_LoadPatchFile(const char* filename)
 							break;
 						case PATCHTAG_BYPASSTRIGGER:
 							triggeraddress = buffer_readle32(buffer, &bufferpos, buffersize) & 0x0FFFFFFF;
-							printf("PATCH: Setting trigger bypass trigger @ 0x%08X.\n", triggeraddress);
+							printf("PATCH: Setting trigger bypass @ 0x%08X.\n", triggeraddress);
 							HW_SetPatchTriggerBypass(&patchctx, triggeraddress);
 							break;
 						case PATCHTAG_ADDPATCH:
@@ -285,7 +285,6 @@ void HW_LoadPatchFile(const char* filename)
 			switch (phdr.p_flags & (PF_R | PF_W)) {
 					
 				case PF_R:  // Read-only. We can patch this.
-					//buffer = HWPatch_AllocRegion(patch, addr, phdr.p_memsz);
 					if (phdr.p_filesz > 0) {
 						fseek(f, phdr.p_offset, SEEK_SET);
 						
@@ -317,6 +316,7 @@ void HW_LoadPatchFile(const char* filename)
 	
 	HW_SetPatchingMode(&patchctx, 1);
 }
+
 
 /*
  * HW_Trace --
