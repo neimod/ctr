@@ -32,9 +32,11 @@
 #include "hw_main.h"
 #include "hw_capture.h"
 #include "hw_patch.h"
+#include "hw_config.h"
 #include "fpgaconfig.h"
 #include "utils.h"
 #include "elf.h"
+
 
 #ifdef _WIN32
 	#define PACKETS_PER_TRANSFER 8
@@ -78,7 +80,7 @@ static unsigned char* buffer_readdata(unsigned char* buffer, unsigned int* buffe
 /*
  * Private functions
  */
-static int HW_ReadCallback(uint8_t *buffer, int length, FTDIProgressInfo *progress, void *userdata);
+static int HW_ReadCallback(FTDIDevice* dev, uint8_t *buffer, int length, FTDIProgressInfo *progress, void *userdata);
 static void HW_SigintHandler(int signum);
 
 
@@ -86,11 +88,12 @@ FILE* outputFile;
 bool exitRequested;
 HWCapture capture;
 HWPatchContext patchctx;
-
+HWConfig configctx;
 
 void HW_Init()
 {
-	HW_PatchInit(&patchctx);	
+	HW_PatchInit(&patchctx);
+	HW_ConfigInit(&configctx);
 }
 
 /*
@@ -382,7 +385,7 @@ void HW_Trace(FTDIDevice *dev, const char *filename)
  *    file open.
  */
 
-static int HW_ReadCallback(uint8_t *buffer, int length, FTDIProgressInfo *progress, void *userdata)
+static int HW_ReadCallback(FTDIDevice* dev, uint8_t *buffer, int length, FTDIProgressInfo *progress, void *userdata)
 {
 	unsigned int pos = 0;
 
@@ -397,6 +400,22 @@ static int HW_ReadCallback(uint8_t *buffer, int length, FTDIProgressInfo *progre
 
 		fprintf(stderr, "%10.02fs [ %9.3f/%.3f MB captured/compressed ] %7.1f kB/s current\r",
 			seconds, mb, mbcomp, progress->currentRate / 1024.0);
+	}
+	
+	if (kbhit())
+	{
+      static unsigned int clockspeed = 73;
+		char ch = getchar();
+		if (ch == 'i')
+      {
+         HW_ConfigureClockSpeed(&configctx, dev, ++clockspeed);
+         printf("\rClock speed %d\n", clockspeed);
+      }
+		else if (ch == 'd')
+      {
+         HW_ConfigureClockSpeed(&configctx, dev, --clockspeed);
+         printf("\rClock speed %d\n", clockspeed);
+      }
 	}
 
 	return exitRequested ? 1 : 0;

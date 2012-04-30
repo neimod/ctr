@@ -33,6 +33,7 @@
 #include "utils.h"
 
 typedef struct {
+   FTDIDevice* dev;
    FTDIStreamCallback *callback;
    void *userdata;
    int result;
@@ -303,7 +304,7 @@ static void LIBUSB_CALL ReadStreamCallback(struct libusb_transfer *transfer)
             payloadLen = packetLen - FTDI_HEADER_SIZE;
             state->progress.current.totalBytes += payloadLen;
 
-            state->result = state->callback(ptr + FTDI_HEADER_SIZE, payloadLen,
+            state->result = state->callback(state->dev, ptr + FTDI_HEADER_SIZE, payloadLen,
                                             NULL, state->userdata);
             if (state->result)
                break;
@@ -345,7 +346,7 @@ static double TimevalDiff(const struct timeval *a, const struct timeval *b)
 int FTDIDevice_ReadStream(FTDIDevice *dev, FTDIInterface interface, FTDIStreamCallback *callback, void *userdata, int packetsPerTransfer, int numTransfers)
 {
    struct libusb_transfer **transfers;
-   FTDIStreamState state = { callback, userdata };
+   FTDIStreamState state = { dev, callback, userdata };
    int bufferSize = packetsPerTransfer * FTDI_PACKET_SIZE;
    int xferIndex;
    int err = 0;
@@ -417,9 +418,10 @@ int FTDIDevice_ReadStream(FTDIDevice *dev, FTDIInterface interface, FTDIStreamCa
 		progress->totalRate = progress->current.totalBytes / progress->totalTime;
 		progress->currentRate = (progress->current.totalBytes - progress->prev.totalBytes) / currentTime;
 
-		state.result = state.callback(NULL, 0, progress, state.userdata);
+		state.result = state.callback(state.dev, NULL, 0, progress, state.userdata);
 		progress->prev = progress->current;
 	  }
+	   
    } while (!state.result);
 
    /*

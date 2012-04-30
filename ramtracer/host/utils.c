@@ -1,9 +1,13 @@
 #ifdef _WIN32
-  #include <windows.h>
-	#include <time.h>
-
+#include <windows.h>
+#include <time.h>
 #else
-  #include <unistd.h>
+#include <unistd.h>
+#include <termios.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/time.h>
+#include "hw_config.h"
 #endif
 
 #include "utils.h"
@@ -11,7 +15,7 @@
 void mssleep(unsigned int millisecs)
 {
 #ifdef _WIN32
-	Sleep(millisecs);
+   Sleep(millisecs);
 #else
 	usleep(millisecs * 1000);
 #endif
@@ -77,3 +81,19 @@ int gettimeofday(struct timeval *tv, struct timezone *tz)
   return 0;
 }
 #endif
+
+
+int kbhit (void)
+{
+   struct timeval tv;
+	fd_set rdfs;
+	
+	tv.tv_sec = 0;
+	tv.tv_usec = 0;
+	
+	FD_ZERO(&rdfs);
+	FD_SET (STDIN_FILENO, &rdfs);
+	
+	select(STDIN_FILENO+1, &rdfs, NULL, NULL, &tv);
+	return FD_ISSET(STDIN_FILENO, &rdfs);	
+}

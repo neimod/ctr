@@ -39,6 +39,7 @@
 #define PATCHTRIGGERBYPASS	0x3
 #define PATCHTRIGGERDATALOWER	0x4
 #define PATCHTRIGGERDATAUPPER	0x5
+#define SETCLOCK	0x6
 
 
 void HW_PatchInit(HWPatchContext* ctx)
@@ -223,10 +224,17 @@ void HW_PatchDevice(HWPatchContext* ctx, FTDIDevice *dev)
 	HW_ConfigAddressWrite(&config, PATCHTRIGGERDATALOWER, ctx->trigger.datalo);	
 	HW_ConfigAddressWrite(&config, PATCHTRIGGERDATAUPPER, ctx->trigger.datahi);
 
-	HW_ConfigDevice(dev, &config);
+	HW_ConfigDevice(dev, &config, false);
 
 	fprintf(stdout, "PATCH: Configured patches.\n");
 }
 
+void HW_ConfigureClockSpeed(HWConfig* config, FTDIDevice* dev, int clockspeed)
+{
+	HW_ConfigClear(config);
+	HW_ConfigAddressWrite(config, SETCLOCK, clockspeed);
+	HW_ConfigDevice(dev, config, true);
+	HW_ConfigClear(config);
+}
 
 

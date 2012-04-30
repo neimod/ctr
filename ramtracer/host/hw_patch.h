@@ -27,6 +27,7 @@
 
 #include <stdint.h>
 #include "fastftdi.h"
+#include "hw_config.h"
 
 #define HWCAMENTRYCOUNT 16
 #define	HWPATCHDATASIZE (16 * 1024)
@@ -85,6 +86,6 @@ void HW_PatchDevice(HWPatchContext* ctx, FTDIDevice *dev);
 void HW_SetPatchWriteTrigger(HWPatchContext* ctx, unsigned int address, unsigned int count, unsigned char* word);
 void HW_SetPatchTriggerBypass(HWPatchContext* ctx, unsigned int address);
 void HW_SetPatchingMode(HWPatchContext* ctx, int enabled);
-
+void HW_ConfigureClockSpeed(HWConfig* config, FTDIDevice* dev, int clockspeed);
 
 #endif // __HW_PATCH_H_

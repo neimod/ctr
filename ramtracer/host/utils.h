@@ -39,5 +39,6 @@
  * Public functions
  */
 void mssleep(unsigned int millisecs);
+int kbhit (void);
 
 #endif // __UTILS_H_

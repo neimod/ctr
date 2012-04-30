@@ -106,7 +106,7 @@ typedef struct {
 #define FTDI_LOG_PACKET_SIZE      9     // 512 == 1 << 9
 #define FTDI_HEADER_SIZE          2
 
-typedef int (FTDIStreamCallback)(uint8_t *buffer, int length, FTDIProgressInfo *progress, void *userdata);
+typedef int (FTDIStreamCallback)(FTDIDevice* dev, uint8_t *buffer, int length, FTDIProgressInfo *progress, void *userdata);
 
 
 /*

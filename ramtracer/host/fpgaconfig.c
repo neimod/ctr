@@ -38,6 +38,7 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
 #include "fpgaconfig.h"
 #include "bit_file.h"
 #include "utils.h"
