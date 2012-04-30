@@ -40,5 +40,6 @@
  */
 void mssleep(unsigned int millisecs);
 int kbhit (void);
+void changeterminal(int dir);
 
 #endif // __UTILS_H_

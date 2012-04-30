@@ -34,24 +34,6 @@
 
 static void usage(const char *argv0);
 
-#include <termios.h>
-#include <unistd.h>
-#include <sys/types.h>
-#include <sys/time.h>
-static void changemode(int dir)
-{
-	static struct termios oldt, newt;
-	
-	if ( dir == 1 )
-	{
-		tcgetattr( STDIN_FILENO, &oldt);
-		newt = oldt;
-		newt.c_lflag &= ~( ICANON | ECHO );
-		tcsetattr( STDIN_FILENO, TCSANOW, &newt);
-	}
-	else
-		tcsetattr( STDIN_FILENO, TCSANOW, &oldt);
-}
 
 static void usage(const char *argv0)
 {
@@ -77,7 +59,7 @@ int main(int argc, char **argv)
 	
    HW_Init();
 	
-	changemode(1);
+	changeterminal(1);
 
    while (1) 
    {
