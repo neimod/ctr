@@ -27,6 +27,7 @@
 
 #include <stdint.h>
 #include "fastftdi.h"
+#include "hw_config.h"
 
 #define HWCAMENTRYCOUNT 16
 #define	HWPATCHDATASIZE (16 * 1024)
@@ -53,12 +54,23 @@ typedef struct {
 } HWPatchContentMemory;
 
 typedef struct {
+	unsigned int address;
+	unsigned int count;
+	unsigned int bypassaddress;
+	unsigned int datalo;
+	unsigned int datahi;	
+} HWPatchTrigger;
+
+
+typedef struct {
 	HWPatchCamMemory cam;
 	HWPatchOffsetMemory offset;
 	HWPatchContentMemory content;
+	HWPatchTrigger trigger;
 
 	unsigned int currententryindex;
-	unsigned int currentdataoffset;
+	unsigned int currentdatawordindex;
+	int mode;
 	
 } HWPatchContext;
 
@@ -71,5 +83,9 @@ void HW_SetPatchOffset(HWPatchContext* ctx, unsigned int index, unsigned int off
 void HW_SetPatchData(HWPatchContext* ctx, unsigned int offset, unsigned char* data, unsigned int size);
 void HW_AddPatch(HWPatchContext* ctx, unsigned int address, unsigned char* data, unsigned int size);
 void HW_PatchDevice(HWPatchContext* ctx, FTDIDevice *dev);
+void HW_SetPatchWriteTrigger(HWPatchContext* ctx, unsigned int address, unsigned int count, unsigned char* word);
+void HW_SetPatchTriggerBypass(HWPatchContext* ctx, unsigned int address);
+void HW_SetPatchingMode(HWPatchContext* ctx, int enabled);
+void HW_ConfigureClockSpeed(HWConfig* config, FTDIDevice* dev, int clockspeed);
 
 #endif // __HW_PATCH_H_

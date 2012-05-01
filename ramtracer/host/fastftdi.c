@@ -33,6 +33,7 @@
 #include "utils.h"
 
 typedef struct {
+   FTDIDevice* dev;
    FTDIStreamCallback *callback;
    void *userdata;
    int result;
@@ -80,7 +81,13 @@ int FTDIDevice_Open(FTDIDevice *dev)
   }
 
   //libusb_set_debug(dev->libusb, 2);
-
+  dev->datamask = 0x01234567;
+  dev->CSI_BIT = (1<<0);
+  dev->RDWR_BIT = (1<<1);
+  dev->DONE_BIT = (1<<2);
+  dev->PROG_BIT = (1<<3);	
+  dev->devicemask = "3s500epq208";
+  dev->patchcapability = 0;
   dev->handle = libusb_open_device_with_vid_pid(dev->libusb, TWLFPGA_VENDOR, TWLFPGA_PRODUCT);
 
   if (!dev->handle)
@@ -89,9 +96,22 @@ int FTDIDevice_Open(FTDIDevice *dev)
   if (!dev->handle) 
     dev->handle = libusb_open_device_with_vid_pid(dev->libusb, TEST_VENDOR, TEST_PRODUCT);
   
-  if (!dev->handle) 
+  if (!dev->handle) {
     dev->handle = libusb_open_device_with_vid_pid(dev->libusb, CTRFPGA_VENDOR, CTRFPGA_PRODUCT);
- 
+	dev->patchcapability = 1;
+  }
+
+  if (!dev->handle) {
+    dev->handle = libusb_open_device_with_vid_pid(dev->libusb, CTRFPGA2_VENDOR, CTRFPGA2_PRODUCT);
+	dev->datamask = 0x45601237;
+	dev->CSI_BIT = (1<<0);
+	dev->RDWR_BIT = (1<<3);
+	dev->DONE_BIT = (1<<2);
+	dev->PROG_BIT = (1<<1);
+	dev->devicemask = "3s400afg400";
+	dev->patchcapability = 1;
+  }
+	
 
   if (!dev->handle)
     return LIBUSB_ERROR_NO_DEVICE;
@@ -284,7 +304,7 @@ static void LIBUSB_CALL ReadStreamCallback(struct libusb_transfer *transfer)
             payloadLen = packetLen - FTDI_HEADER_SIZE;
             state->progress.current.totalBytes += payloadLen;
 
-            state->result = state->callback(ptr + FTDI_HEADER_SIZE, payloadLen,
+            state->result = state->callback(state->dev, ptr + FTDI_HEADER_SIZE, payloadLen,
                                             NULL, state->userdata);
             if (state->result)
                break;
@@ -326,7 +346,7 @@ static double TimevalDiff(const struct timeval *a, const struct timeval *b)
 int FTDIDevice_ReadStream(FTDIDevice *dev, FTDIInterface interface, FTDIStreamCallback *callback, void *userdata, int packetsPerTransfer, int numTransfers)
 {
    struct libusb_transfer **transfers;
-   FTDIStreamState state = { callback, userdata };
+   FTDIStreamState state = { dev, callback, userdata };
    int bufferSize = packetsPerTransfer * FTDI_PACKET_SIZE;
    int xferIndex;
    int err = 0;
@@ -398,9 +418,10 @@ int FTDIDevice_ReadStream(FTDIDevice *dev, FTDIInterface interface, FTDIStreamCa
 		progress->totalRate = progress->current.totalBytes / progress->totalTime;
 		progress->currentRate = (progress->current.totalBytes - progress->prev.totalBytes) / currentTime;
 
-		state.result = state.callback(NULL, 0, progress, state.userdata);
+		state.result = state.callback(state.dev, NULL, 0, progress, state.userdata);
 		progress->prev = progress->current;
 	  }
+	   
    } while (!state.result);
 
    /*

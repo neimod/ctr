@@ -44,6 +44,11 @@ void HW_ConfigInit(HWConfig* config)
 	config->capacity = 0;
 }
 
+void HW_ConfigClear(HWConfig* config)
+{
+   config->size = 0;
+}
+
 void HW_ConfigDestroy(HWConfig* config)
 {
 	if (config->data)
@@ -85,6 +90,8 @@ void HW_ConfigWrite(HWConfig* config, unsigned char* data, unsigned int size)
 	HW_ConfigReserve(config, size);
 
 	memcpy(config->data + config->size, data, size);
+	
+	config->size += size;
 }
 
 void HW_ConfigWrite16(HWConfig* config, unsigned int n)
@@ -120,11 +127,8 @@ void HW_ConfigAddressWrite(HWConfig* config, unsigned int address, unsigned int 
 	HW_ConfigWrite32(config, value);
 }
 
-void HW_ConfigDevice(FTDIDevice* dev, HWConfig* config)
+void HW_ConfigDevice(FTDIDevice* dev, HWConfig* config, bool async)
 {
-	bool async = false;
-
-	
 	if (FTDIDevice_Write(dev, FTDI_INTERFACE_A, config->data, config->size, async)) {
 		perror("Error writing configuration");
 		exit(1);

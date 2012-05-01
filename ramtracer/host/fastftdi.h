@@ -55,6 +55,13 @@ typedef enum {
 typedef struct {
   libusb_context *libusb;
   libusb_device_handle *handle;
+  unsigned int datamask;
+  unsigned int CSI_BIT;
+  unsigned int RDWR_BIT;
+  unsigned int DONE_BIT;
+  unsigned int PROG_BIT;
+  const char* devicemask;
+  unsigned int patchcapability;
 } FTDIDevice;
 
 typedef struct {
@@ -80,6 +87,8 @@ typedef struct {
 #define TWLFPGA_PRODUCT           0x0014
 #define CTRFPGA_VENDOR            0xe461
 #define CTRFPGA_PRODUCT           0x0015
+#define CTRFPGA2_VENDOR           0xe461
+#define CTRFPGA2_PRODUCT          0x0016
 
 #define TEST_VENDOR            0x03eb
 #define TEST_PRODUCT           0x6119
@@ -97,7 +106,7 @@ typedef struct {
 #define FTDI_LOG_PACKET_SIZE      9     // 512 == 1 << 9
 #define FTDI_HEADER_SIZE          2
 
-typedef int (FTDIStreamCallback)(uint8_t *buffer, int length, FTDIProgressInfo *progress, void *userdata);
+typedef int (FTDIStreamCallback)(FTDIDevice* dev, uint8_t *buffer, int length, FTDIProgressInfo *progress, void *userdata);
 
 
 /*

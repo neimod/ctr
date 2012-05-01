@@ -45,9 +45,10 @@ typedef struct
  */
 
 void HW_ConfigInit(HWConfig* config);
+void HW_ConfigClear(HWConfig* config);
 void HW_ConfigDestroy(HWConfig* config);
 void HW_ConfigAddressRead(HWConfig* config, unsigned int address);
 void HW_ConfigAddressWrite(HWConfig* config, unsigned int address, unsigned int value);
-void HW_ConfigDevice(FTDIDevice* dev, HWConfig* config);
+void HW_ConfigDevice(FTDIDevice* dev, HWConfig* config, bool async);
 
 #endif // __HW_CONFIG_H_
