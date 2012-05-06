@@ -26,10 +26,12 @@ typedef struct
 	int actions;
 	u32 filetype;
 	FILE* infile;
+	u32 infilesize;
 	keyset keys;
 	ncch_context ncch;
 	cia_context cia;
 	exheader_context exheader;
+	tmd_context tmd;
 } toolcontext;
 
 static void usage(const char *argv0)
@@ -52,7 +54,7 @@ static void usage(const char *argv0)
 		   "  --commonkey=key    Set common key.\n"
 		   "  --ncchctrkey=key   Set ncchctr key.\n"
 		   "  --showkeys         Show the keys being used.\n"
-		   "  -t, --intype=type	 Specify input file type [ncsd, ncch, exheader]\n"
+		   "  -t, --intype=type	 Specify input file type [ncsd, ncch, exheader, cia, tmd]\n"
 		   "CXI/CCI options:\n"
 		   "  -n, --ncch=offs    Specify offset for NCCH header.\n"
 		   "  --exefs=file       Specify ExeFS file path.\n"
@@ -90,6 +92,7 @@ int main(int argc, char* argv[])
 	ncch_init(&ctx.ncch);
 	cia_init(&ctx.cia);
 	exheader_init(&ctx.exheader);
+	tmd_init(&ctx.tmd);
 
 	while (1) 
 	{
@@ -168,6 +171,8 @@ int main(int argc, char* argv[])
 					ctx.filetype = FILETYPE_CCI;
 				else if (!strcmp(optarg, "cia"))
 					ctx.filetype = FILETYPE_CIA;
+				else if (!strcmp(optarg, "tmd"))
+					ctx.filetype = FILETYPE_TMD;
 			break;
 
 			case 0: ncch_set_exefspath(&ctx.ncch, optarg); break;
@@ -213,6 +218,10 @@ int main(int argc, char* argv[])
 		return -1;
 	}
 
+	fseek(ctx.infile, 0, SEEK_END);
+	ctx.infilesize = ftell(ctx.infile);
+	fseek(ctx.infile, 0, SEEK_SET);
+
 	ncch_set_file(&ctx.ncch, ctx.infile);
 	ncch_load_keys(&ctx.ncch, &ctx.keys);
 	cia_set_file(&ctx.cia, ctx.infile);
@@ -220,6 +229,9 @@ int main(int argc, char* argv[])
 	exheader_set_file(&ctx.exheader, ctx.infile);
 	exheader_set_offset(&ctx.exheader, 0);
 	exheader_set_ignoreprogramid(&ctx.exheader, 1);
+	tmd_set_file(&ctx.tmd, ctx.infile);
+	tmd_set_offset(&ctx.tmd, 0);
+	tmd_set_size(&ctx.tmd, ctx.infilesize);
 
 	if (ctx.keys.commonkey.valid)
 		cia_set_commonkey(&ctx.cia, ctx.keys.commonkey.data);
@@ -287,6 +299,10 @@ int main(int argc, char* argv[])
 
 		case FILETYPE_EXHEADER:
 			exheader_process(&ctx.exheader, ctx.actions);
+		break;
+
+		case FILETYPE_TMD:
+			tmd_process(&ctx.tmd, ctx.actions);
 		break;
 	}
 	

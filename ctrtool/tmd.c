@@ -28,11 +28,18 @@ void tmd_set_size(tmd_context* ctx, u32 size)
 
 void tmd_process(tmd_context* ctx, u32 actions)
 {
-	if (ctx->buffer == 0) {
+	if (ctx->buffer == 0)
 		ctx->buffer = malloc(ctx->size);
 
+	if (ctx->buffer)
+	{
 		fseek(ctx->file, ctx->offset, SEEK_SET);
 		fread(ctx->buffer, 1, ctx->size, ctx->file);
+
+		if (actions & InfoFlag)
+		{
+			tmd_print(ctx);
+		}
 	}
 }
 
@@ -50,6 +57,19 @@ ctr_tmd_body *tmd_get_body(tmd_context *ctx) {
 	}
 
 	return body;
+}
+
+const char* tmd_get_type_string(unsigned int type)
+{
+	switch(type)
+	{
+	case TMD_RSA_2048_SHA256: return "RSA 2048 - SHA256";
+	case TMD_RSA_4096_SHA256: return "RSA 4096 - SHA256";
+	case TMD_RSA_2048_SHA1: return "RSA 2048 - SHA1";
+	case TMD_RSA_4096_SHA1: return "RSA 4096 - SHA1";
+	default:
+		return "unknown";
+	}
 }
 
 void tmd_print(tmd_context* ctx)
@@ -79,6 +99,7 @@ void tmd_print(tmd_context* ctx)
 	contentcount = getbe16(body->contentcount);
 
 	fprintf(stdout, "\nTMD header:\n");
+	fprintf(stdout, "Signature type:         %s\n", tmd_get_type_string(type));
 	fprintf(stdout, "Issuer:                 %s\n", body->issuer);
 	fprintf(stdout, "Version:                %d\n", body->version);
 	fprintf(stdout, "CA CRL version:         %d\n", body->ca_crl_version);
