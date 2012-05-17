@@ -86,6 +86,7 @@ void HW_PatchDevice(HWPatchContext* ctx, FTDIDevice *dev);
 void HW_SetPatchWriteTrigger(HWPatchContext* ctx, unsigned int address, unsigned int count, unsigned char* word);
 void HW_SetPatchTriggerBypass(HWPatchContext* ctx, unsigned int address);
 void HW_SetPatchingMode(HWPatchContext* ctx, int enabled);
-void HW_ConfigureClockSpeed(HWConfig* config, FTDIDevice* dev, int clockspeed);
+void HW_ConfigureClockSpeed(HWBuffer* buffer, FTDIDevice* dev, int clockspeed);
+void HW_FifoWrite(HWBuffer* buffer, const unsigned char* data, unsigned int size);
 
 #endif // __HW_PATCH_H_

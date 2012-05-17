@@ -28,7 +28,7 @@
 #include <stdio.h>
 #include <pthread.h>
 #include "hw_buffer.h"
-
+#include "fastftdi.h"
 /*
  * HWCapture -- Worker structure for a seperately running thread that does heavy processing
  *              on real-time captured RAM tracing data, such as compression and saving to disk. 
@@ -39,17 +39,19 @@ typedef struct
 {
 	FILE* outputFile;
 	unsigned int running;
+   unsigned int done;
 	unsigned int compressedsize;
 	pthread_t thread;
 	pthread_mutex_t mutex;
 	HWBufferChain chain;
+   FTDIDevice* dev;
 } HWCapture;
 
 /*
  * Public functions
  */
-
-void HW_CaptureBegin(HWCapture* capture, FILE* outputFile);
+void HW_CaptureBegin(HWCapture* capture, FILE* outputFile, FTDIDevice* dev);
+unsigned int HW_CaptureTryStop(HWCapture* capture);
 void HW_CaptureFinish(HWCapture* capture);
 void HW_CaptureDataBlock(HWCapture* capture, uint8_t* buffer, unsigned int length);
 

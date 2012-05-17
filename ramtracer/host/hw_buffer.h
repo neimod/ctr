@@ -27,17 +27,23 @@
 
 #include <stdint.h>
 
-#define HWBUFSIZE (64 * 1024 * 1024)
+#define HWBUF_SIZE (64 * 1024 * 1024)
+
+#define HWBUF_FLAG_ALLOC_NODE (1<<0)
+#define HWBUF_FLAG_ALLOC_BUFFER (1<<1)
+
 
 /*
  * HWBuffer -- Buffer for storing real-time captured data.
  */
 
 typedef struct HWBuffer {
-	unsigned int available;
+	unsigned int size;
 	unsigned int capacity;
 	struct HWBuffer* next;
-	unsigned char buffer[HWBUFSIZE];
+   unsigned int flags;
+	unsigned char* buffer;
+   unsigned int pos;
 } HWBuffer;
 
 
@@ -50,10 +56,23 @@ typedef struct {
  * Public functions
  */
 
-unsigned int HW_FillBuffer(HWBuffer* node, unsigned char* buffer, unsigned int size);
-HWBuffer* HW_GetFirstBuffer(HWBufferChain* chain);
-HWBuffer* HW_GetLastBuffer(HWBufferChain* chain);
-void HW_RemoveFirstBuffer(HWBufferChain* chain);
-HWBuffer* HW_AddNewBuffer(HWBufferChain* chain);
+
+HWBuffer*    HW_BufferAllocate(unsigned int size);
+void         HW_BufferClear(HWBuffer* node);
+unsigned int HW_BufferFill(HWBuffer* node, unsigned char* buffer, unsigned int size);
+void         HW_BufferReserve(HWBuffer* node, unsigned int size);
+void         HW_BufferInit(HWBuffer* node, unsigned int size);
+void         HW_BufferDestroy(HWBuffer* node);
+void         HW_BufferAppend(HWBuffer* node, unsigned char* buffer, unsigned int size);
+void         HW_BufferResize(HWBuffer* node, unsigned int size);
+void         HW_BufferGrow(HWBuffer* node, unsigned int minimumsize);
+
+void         HW_BufferChainInit(HWBufferChain* chain);
+HWBuffer*    HW_BufferChainGetFirst(HWBufferChain* chain);
+HWBuffer*    HW_BufferChainGetLast(HWBufferChain* chain);
+HWBuffer*    HW_BufferChainRemoveFirst(HWBufferChain* chain);
+void         HW_BufferChainDestroyFirst(HWBufferChain* chain);
+void         HW_BufferChainAppend(HWBufferChain* chain, HWBuffer* node);
+HWBuffer*    HW_BufferChainAppendNew(HWBufferChain* chain);
 
 #endif // __HW_BUFFER_H_

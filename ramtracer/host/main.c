@@ -123,6 +123,8 @@ int main(int argc, char **argv)
    HW_Trace(&dev, tracefile);
 
    FTDIDevice_Close(&dev);
+   
+   changeterminal(0);
 
    return 0;
 }

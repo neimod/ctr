@@ -29,22 +29,112 @@
 #include <pthread.h>
 #include <zlib.h>
 #include "hw_capture.h"
+#include "hw_config.h"
+
 #include "utils.h"
 
 #define ZCHUNK (64 * 1024 * 1024)
 #define ZCOMPLEVEL 2
 
+static HWBuffer configctx;
+static HWBuffer writefifo;
+static FILE* fifofile = 0;
+
 // Private functions
 static void* HW_CaptureThread(void* arg);
 
+static void fix_data_order(unsigned int *mask, unsigned char *data)
+{
+	unsigned char input_data[8];
+   
+	*mask = ((*mask << 2) | (*mask >> 6)) & 0xFF;
+   
+	memcpy(input_data, data, 8);
+	data[0] = input_data[6];
+	data[1] = input_data[7];
+	data[2] = input_data[0];
+	data[3] = input_data[1];
+	data[4] = input_data[2];
+	data[5] = input_data[3];
+	data[6] = input_data[4];
+	data[7] = input_data[5];
+}
 
-void HW_CaptureBegin(HWCapture* capture, FILE* outputFile)
+int HW_ProcessSample(FTDIDevice* dev, uint8_t* sampledata)
+{
+   unsigned int header;
+	unsigned int address;
+	static unsigned int fifocount = 0;
+   
+	header = sampledata[0];
+	address = sampledata[1] | (sampledata[2]<<8) | (sampledata[3]<<16);
+   
+	if ( (header == 1) && (address == 0x7FFFE0))
+	{
+      unsigned char memdata[8];
+      unsigned int mask = sampledata[12];
+      static unsigned char testbuffer[4] = {1, 2, 3, 4};
+      
+		//fifocount++;
+		//fprintf(stdout, "\nFifo was read %d\n", fifocount);
+		
+      memcpy(memdata, sampledata+4, 8);
+      fix_data_order(&mask, memdata);
+      
+      if (memdata[0] == 0 && memdata[1] == 0 && memdata[2] == 0 && memdata[3] == 0)
+      {
+         if (fifofile)
+            fread(testbuffer, 1, 4, fifofile);
+         
+         HW_FifoWrite(&writefifo, testbuffer, 4);
+         
+      }
+	}
+}
+
+int HW_ProcessBlock(FTDIDevice* dev, uint8_t *buffer, int length)
+{
+	static unsigned int samplesize = 0;
+	static unsigned char sampledata[13];
+	
+	if (samplesize && (samplesize+length >= 13))
+	{
+		unsigned int readlen = 13-samplesize;
+		memcpy(sampledata+samplesize, buffer, readlen);
+		
+		HW_ProcessSample(dev, sampledata);
+		
+		length -= readlen;
+		samplesize = 0;
+		buffer += readlen;
+	}
+	
+	while(length >= 13)
+	{
+		HW_ProcessSample(dev, buffer);
+		
+		buffer += 13;
+		length -= 13;
+	}
+	
+	if (length)
+	{
+		memcpy(sampledata+samplesize, buffer, length);
+		samplesize += length;
+	}
+}
+
+void HW_CaptureBegin(HWCapture* capture, FILE* outputFile, FTDIDevice* dev)
 {
 	int err;
 
+	HW_ConfigInit(&configctx);
+   HW_BufferInit(&writefifo, 16);
 
 	capture->outputFile = outputFile;
 	capture->compressedsize = 0;
+   capture->done = 0;
+   capture->dev = dev;
 
 	if (outputFile == 0)
 		return;
@@ -61,13 +151,17 @@ void HW_CaptureBegin(HWCapture* capture, FILE* outputFile)
 	}
 }
 
+unsigned int HW_CaptureTryStop(HWCapture* capture)
+{
+   capture->running = 0;
+   return capture->done;
+}
+
+
+
 void HW_CaptureFinish(HWCapture* capture)
 {
 	int err;
-
-	if (capture->running == 0)
-		return;
-
 
 	capture->running = 0;
 	err = pthread_join(capture->thread, 0);
@@ -92,12 +186,11 @@ void HW_CaptureDataBlock(HWCapture* capture, uint8_t* buffer, unsigned int lengt
 		return;
 
 	pthread_mutex_lock(&capture->mutex);
+	node = HW_BufferChainGetLast(&capture->chain);
 	
-	node = HW_GetLastBuffer(&capture->chain);
-	
+
 	if (node == 0)
-		node = HW_AddNewBuffer(&capture->chain);
-	
+		node = HW_BufferChainAppendNew(&capture->chain);
 	
 
 	while(pos < length)
@@ -108,10 +201,10 @@ void HW_CaptureDataBlock(HWCapture* capture, uint8_t* buffer, unsigned int lengt
 			exit(1);
 		}
 		
-		pos += HW_FillBuffer(node, buffer + pos, length - pos);
+		pos += HW_BufferFill(node, buffer + pos, length - pos);
 					
 		if (pos < length)
-			node = HW_AddNewBuffer(&capture->chain);
+			node = HW_BufferChainAppendNew(&capture->chain);
 	}
 	
 	pthread_mutex_unlock(&capture->mutex);
@@ -127,6 +220,18 @@ static void* HW_CaptureThread(void* arg)
 	unsigned int have = 0;
 	
 
+   fifofile = fopen("fifo.bin", "rb");
+
+   {
+      unsigned char testbuffer[0x100];
+      
+      if (fifofile)
+         fread(testbuffer, 1, 0x100, fifofile);
+   
+      HW_FifoWrite(&writefifo, testbuffer, 0x100);
+   }
+   
+   
 	if (capture->outputFile == 0)
 	{
 		fprintf(stderr, "Error no output file provided\n");
@@ -157,27 +262,48 @@ static void* HW_CaptureThread(void* arg)
 		unsigned int available;
 		unsigned int capacity;
 		unsigned char* buffer;
-				
-		
+      unsigned int buffersize;
+      unsigned int bufferpos;
+   
 		pthread_mutex_lock(&capture->mutex);
 		
-		node = HW_GetFirstBuffer(&capture->chain);
+		node = HW_BufferChainGetFirst(&capture->chain);
 		
 		if (node)
 		{
-			available = node->available;
+			available = node->capacity - node->size;
+         buffersize = node->size;
+         bufferpos = node->pos;
 			buffer = node->buffer;
 			capacity = node->capacity;
+         
+         node->pos = node->size;
 		}
 		
 		pthread_mutex_unlock(&capture->mutex);
+      
+      if (node && (buffersize - bufferpos > 0))
+      {
+         HW_ProcessBlock(capture->dev, buffer + bufferpos, buffersize - bufferpos);
+         
+         if (writefifo.size)
+         {
+            int err = HW_ConfigDevice(capture->dev, &writefifo, 1);
+            
+            if (err == 0) {
+               HW_BufferClear(&writefifo);
+            } else {
+               printf("\nError write submit\n");
+            }
+         }
+      }
 		
 		if (node == 0 || available != 0)
 		{
 			mssleep(1);
 			continue;
 		}
-
+      
 		stream.avail_in = capacity;
 		stream.next_in = buffer;
 		
@@ -210,8 +336,8 @@ static void* HW_CaptureThread(void* arg)
 		
 		nodecount = 0;
 		pthread_mutex_lock(&capture->mutex);
-		HW_RemoveFirstBuffer(&capture->chain);
-		node = HW_GetFirstBuffer(&capture->chain);
+		HW_BufferChainDestroyFirst(&capture->chain);
+		node = HW_BufferChainGetFirst(&capture->chain);
 		while(1)
 		{			
 			if (node == 0)
@@ -234,11 +360,11 @@ static void* HW_CaptureThread(void* arg)
 				
 		pthread_mutex_lock(&capture->mutex);
 		
-		node = HW_GetFirstBuffer(&capture->chain);
+		node = HW_BufferChainGetFirst(&capture->chain);
 		
 		if (node)
 		{
-			available = node->available;
+			available = node->capacity - node->size;
 			buffer = node->buffer;
 			capacity = node->capacity;
 		}
@@ -283,7 +409,7 @@ static void* HW_CaptureThread(void* arg)
 		} while(stream.avail_out == 0);
 				
 		pthread_mutex_lock(&capture->mutex);
-		HW_RemoveFirstBuffer(&capture->chain);
+		HW_BufferChainDestroyFirst(&capture->chain);
 		pthread_mutex_unlock(&capture->mutex);		
 	}
 	
@@ -319,6 +445,10 @@ static void* HW_CaptureThread(void* arg)
 	
 	deflateEnd(&stream);
 	free(zbuffer);
+   
+   capture->done = 1;
+   
+   printf("\n\nThread stopped.\n\n");
 
 	return 0;
 }

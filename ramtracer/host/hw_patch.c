@@ -40,6 +40,7 @@
 #define PATCHTRIGGERDATALOWER	0x4
 #define PATCHTRIGGERDATAUPPER	0x5
 #define SETCLOCK	0x6
+#define WRITEFIFO	0x7
 
 
 void HW_PatchInit(HWPatchContext* ctx)
@@ -192,18 +193,18 @@ void HW_SetPatchTriggerBypass(HWPatchContext* ctx, unsigned int address)
 
 void HW_PatchDevice(HWPatchContext* ctx, FTDIDevice *dev)
 {
-	HWConfig config;
+	HWBuffer buffer;
 	unsigned int i;
 
-	HW_ConfigInit(&config);
+	HW_ConfigInit(&buffer);
 
 	for(i=0; i<HWCAMENTRYCOUNT; i++)
-		HW_ConfigAddressWrite(&config, PATCHOFFSETRAM + i, ctx->offset.entries[i]);
+		HW_ConfigAddressWrite(&buffer, PATCHOFFSETRAM + i, ctx->offset.entries[i]);
 
 	for(i=0; i<HWCAMENTRYCOUNT; i++)
 	{
-		HW_ConfigAddressWrite(&config, PATCHCAMMASK, ctx->cam.entries[i].mask);
-		HW_ConfigAddressWrite(&config, PATCHCAMRAM + i, ctx->cam.entries[i].data);
+		HW_ConfigAddressWrite(&buffer, PATCHCAMMASK, ctx->cam.entries[i].mask);
+		HW_ConfigAddressWrite(&buffer, PATCHCAMRAM + i, ctx->cam.entries[i].data);
 	}
 	
 	for(i=0; i<HWPATCHDATASIZE/8; i++)
@@ -215,26 +216,50 @@ void HW_PatchDevice(HWPatchContext* ctx, FTDIDevice *dev)
 		lowerdata = (data[4]<<24) | (data[5]<<16) | (data[6]<<8) | data[7];
 		upperdata = (data[0]<<24) | (data[1]<<16) | (data[2]<<8) | data[3];
 
-		HW_ConfigAddressWrite(&config, PATCHDATAUPPER, upperdata);
-		HW_ConfigAddressWrite(&config, PATCHDATARAM + i, lowerdata);
+		HW_ConfigAddressWrite(&buffer, PATCHDATAUPPER, upperdata);
+		HW_ConfigAddressWrite(&buffer, PATCHDATARAM + i, lowerdata);
 	}
 	
-	HW_ConfigAddressWrite(&config, PATCHTRIGGER, (ctx->trigger.count<<24) | ctx->trigger.address);
-	HW_ConfigAddressWrite(&config, PATCHTRIGGERBYPASS, ctx->trigger.bypassaddress);
-	HW_ConfigAddressWrite(&config, PATCHTRIGGERDATALOWER, ctx->trigger.datalo);	
-	HW_ConfigAddressWrite(&config, PATCHTRIGGERDATAUPPER, ctx->trigger.datahi);
+	HW_ConfigAddressWrite(&buffer, PATCHTRIGGER, (ctx->trigger.count<<24) | ctx->trigger.address);
+	HW_ConfigAddressWrite(&buffer, PATCHTRIGGERBYPASS, ctx->trigger.bypassaddress);
+	HW_ConfigAddressWrite(&buffer, PATCHTRIGGERDATALOWER, ctx->trigger.datalo);	
+	HW_ConfigAddressWrite(&buffer, PATCHTRIGGERDATAUPPER, ctx->trigger.datahi);
 
-	HW_ConfigDevice(dev, &config, false);
+	HW_ConfigDevice(dev, &buffer, false);
 
-	fprintf(stdout, "PATCH: Configured patches.\n");
+	fprintf(stdout, "PATCH: Configured patches, %d CAM entries, %d bytes data.\n", ctx->currententryindex, ctx->currentdatawordindex*8);
 }
 
-void HW_ConfigureClockSpeed(HWConfig* config, FTDIDevice* dev, int clockspeed)
+void HW_ConfigureClockSpeed(HWBuffer* buffer, FTDIDevice* dev, int clockspeed)
 {
-	HW_ConfigClear(config);
-	HW_ConfigAddressWrite(config, SETCLOCK, clockspeed);
-	HW_ConfigDevice(dev, config, true);
-	HW_ConfigClear(config);
+	HW_ConfigClear(buffer);
+	HW_ConfigAddressWrite(buffer, SETCLOCK, clockspeed);
+	HW_ConfigDevice(dev, buffer, true);
+	HW_ConfigClear(buffer);
 }
 
+//void HW_FifoWrite(HWBuffer* buffer, FTDIDevice* dev, const unsigned char* data, unsigned int size)
+void HW_FifoWrite(HWBuffer* buffer, const unsigned char* data, unsigned int size)
+{
+   unsigned int wordcount = size / 4;
+   unsigned int word;
+   unsigned int i;
+
+   if (size & 3)
+   {
+      fprintf(stderr, "Fifo write size must be 4 byte aligned\n");
+      exit(1);
+   }
+ 
+   
+//   HW_ConfigClear(buffer);
+   
+   for(i=0; i<wordcount; i++)
+   {
+		word = (data[i*4+0]<<24) | (data[i*4+1]<<16) | (data[i*4+2]<<8) | data[i*4+3];
+      HW_ConfigAddressWrite(buffer, WRITEFIFO, word);
+   }
+//   HW_ConfigDevice(dev, buffer, true);
+//	HW_ConfigClear(buffer);
+}
 

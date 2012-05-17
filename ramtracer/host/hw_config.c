@@ -27,84 +27,38 @@
 #include <stdio.h>
 #include "hw_config.h"
 
+#define HWCONFIG_INITIAL_BUFSIZE 16
 
 // Private functions
-void HW_ConfigGrow(HWConfig* config);
-void HW_ConfigReserve(HWConfig* config, unsigned int size);
-void HW_ConfigWrite(HWConfig* config, unsigned char* data, unsigned int size);
-void HW_ConfigWrite16(HWConfig* config, unsigned int n);
-void HW_ConfigWrite32(HWConfig* config, unsigned int n);
+static void HW_ConfigWrite16(HWBuffer* buffer, unsigned int n);
+static void HW_ConfigWrite32(HWBuffer* buffer, unsigned int n);
 
-
-
-void HW_ConfigInit(HWConfig* config)
+void HW_ConfigInit(HWBuffer* buffer)
 {
-	config->data = 0;
-	config->size = 0;
-	config->capacity = 0;
+   HW_BufferInit(buffer, HWCONFIG_INITIAL_BUFSIZE);
 }
 
-void HW_ConfigClear(HWConfig* config)
+void HW_ConfigClear(HWBuffer* buffer)
 {
-   config->size = 0;
+   HW_BufferClear(buffer);
 }
 
-void HW_ConfigDestroy(HWConfig* config)
+void HW_ConfigDestroy(HWBuffer* buffer)
 {
-	if (config->data)
-		free(config->data);
-	config->data = 0;
-	config->size = 0;
-	config->capacity = 0;
+   HW_BufferDestroy(buffer);
 }
 
-void HW_ConfigGrow(HWConfig* config)
-{
-	unsigned int nextcapacity = config->capacity * 2;
-	unsigned char* buffer = 0;
-
-
-	if (nextcapacity == 0)
-		nextcapacity = 16;
-	
-	buffer = malloc(nextcapacity);
-
-	if (config->data)
-	{
-		memcpy(buffer, config->data, config->size);
-		free(config->data);
-	}
-
-	config->capacity = nextcapacity;
-	config->data = buffer;
-}
-
-void HW_ConfigReserve(HWConfig* config, unsigned int size)
-{
-	while(config->size + size > config->capacity)
-		HW_ConfigGrow(config);
-}
-
-void HW_ConfigWrite(HWConfig* config, unsigned char* data, unsigned int size)
-{
-	HW_ConfigReserve(config, size);
-
-	memcpy(config->data + config->size, data, size);
-	
-	config->size += size;
-}
-
-void HW_ConfigWrite16(HWConfig* config, unsigned int n)
+void HW_ConfigWrite16(HWBuffer* buffer, unsigned int n)
 {
 	unsigned char data[2];
 
 	data[0] = n>>0;
 	data[1] = n>>8;
 
-	HW_ConfigWrite(config, data, 2);
+	HW_BufferAppend(buffer, data, 2);
 }
 
-void HW_ConfigWrite32(HWConfig* config, unsigned int n)
+void HW_ConfigWrite32(HWBuffer* buffer, unsigned int n)
 {
 	unsigned char data[4];
 
@@ -113,24 +67,21 @@ void HW_ConfigWrite32(HWConfig* config, unsigned int n)
 	data[2] = n>>16;
 	data[3] = n>>24;
 
-	HW_ConfigWrite(config, data, 4);
+	HW_BufferAppend(buffer, data, 4);
 }
 
-void HW_ConfigAddressRead(HWConfig* config, unsigned int address)
+void HW_ConfigAddressRead(HWBuffer* buffer, unsigned int address)
 {
-	HW_ConfigWrite16(config, address & ~0x8000);
+	HW_ConfigWrite16(buffer, address & ~0x8000);
 }
 
-void HW_ConfigAddressWrite(HWConfig* config, unsigned int address, unsigned int value)
+void HW_ConfigAddressWrite(HWBuffer* buffer, unsigned int address, unsigned int value)
 {
-	HW_ConfigWrite16(config, address | 0x8000);
-	HW_ConfigWrite32(config, value);
+	HW_ConfigWrite16(buffer, address | 0x8000);
+	HW_ConfigWrite32(buffer, value);
 }
 
-void HW_ConfigDevice(FTDIDevice* dev, HWConfig* config, bool async)
+int HW_ConfigDevice(FTDIDevice* dev, HWBuffer* buffer, bool async)
 {
-	if (FTDIDevice_Write(dev, FTDI_INTERFACE_A, config->data, config->size, async)) {
-		perror("Error writing configuration");
-		exit(1);
-	}
+	return FTDIDevice_Write(dev, FTDI_INTERFACE_A, buffer->buffer, buffer->size, async);
 }

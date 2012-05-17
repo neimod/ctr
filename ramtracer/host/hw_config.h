@@ -26,29 +26,21 @@
 #define __HW_CONFIG_H_
 
 #include "fastftdi.h"
+#include "hw_buffer.h"
 
 /*
  * HWConfig --  Worker structure for containing a complete configuration stream.
  */
 
-
-typedef struct
-{
-	unsigned char* data;
-	unsigned int size;
-	unsigned int capacity;
-} HWConfig;
-
-
 /*
  * Public functions
  */
 
-void HW_ConfigInit(HWConfig* config);
-void HW_ConfigClear(HWConfig* config);
-void HW_ConfigDestroy(HWConfig* config);
-void HW_ConfigAddressRead(HWConfig* config, unsigned int address);
-void HW_ConfigAddressWrite(HWConfig* config, unsigned int address, unsigned int value);
-void HW_ConfigDevice(FTDIDevice* dev, HWConfig* config, bool async);
+void HW_ConfigInit(HWBuffer* buffer);
+void HW_ConfigClear(HWBuffer* buffer);
+void HW_ConfigDestroy(HWBuffer* buffer);
+void HW_ConfigAddressRead(HWBuffer* buffer, unsigned int address);
+void HW_ConfigAddressWrite(HWBuffer* buffer, unsigned int address, unsigned int value);
+int HW_ConfigDevice(FTDIDevice* dev, HWBuffer* buffer, bool async);
 
 #endif // __HW_CONFIG_H_

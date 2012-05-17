@@ -31,37 +31,54 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <time.h>
+#include <pthread.h>
 
 #ifndef LIBUSB_CALL
 #define LIBUSB_CALL
 #endif
 
 typedef enum {
-  FTDI_BITMODE_RESET        = 0,
-  FTDI_BITMODE_BITBANG      = 1 << 0,
-  FTDI_BITMODE_MPSSE        = 1 << 1,
-  FTDI_BITMODE_SYNC_BITBANG = 1 << 2,
-  FTDI_BITMODE_MCU          = 1 << 3,
-  FTDI_BITMODE_OPTO         = 1 << 4,
-  FTDI_BITMODE_CBUS         = 1 << 5,
-  FTDI_BITMODE_SYNC_FIFO    = 1 << 6,
+   FTDI_BITMODE_RESET        = 0,
+   FTDI_BITMODE_BITBANG      = 1 << 0,
+   FTDI_BITMODE_MPSSE        = 1 << 1,
+   FTDI_BITMODE_SYNC_BITBANG = 1 << 2,
+   FTDI_BITMODE_MCU          = 1 << 3,
+   FTDI_BITMODE_OPTO         = 1 << 4,
+   FTDI_BITMODE_CBUS         = 1 << 5,
+   FTDI_BITMODE_SYNC_FIFO    = 1 << 6,
 } FTDIBitmode;
 
 typedef enum {
-  FTDI_INTERFACE_A = 1,
-  FTDI_INTERFACE_B = 2,
+   FTDI_INTERFACE_A = 1,
+   FTDI_INTERFACE_B = 2,
 } FTDIInterface;
 
+typedef struct FTDITransfer {
+   struct libusb_transfer* transfer;
+   
+   struct FTDITransfer* next;
+   void* userdata;
+} FTDITransfer;
+
 typedef struct {
-  libusb_context *libusb;
-  libusb_device_handle *handle;
-  unsigned int datamask;
-  unsigned int CSI_BIT;
-  unsigned int RDWR_BIT;
-  unsigned int DONE_BIT;
-  unsigned int PROG_BIT;
-  const char* devicemask;
-  unsigned int patchcapability;
+   FTDITransfer* transfer;
+   unsigned int transfercount;
+   
+   FTDITransfer* free;
+} FTDITransferPool;
+
+typedef struct {
+   libusb_context *libusb;
+   libusb_device_handle *handle;
+   unsigned int datamask;
+   unsigned int CSI_BIT;
+   unsigned int RDWR_BIT;
+   unsigned int DONE_BIT;
+   unsigned int PROG_BIT;
+   const char* devicemask;
+   unsigned int patchcapability;
+   FTDITransferPool transferpool;
+	pthread_mutex_t mutex;   
 } FTDIDevice;
 
 typedef struct {
@@ -75,6 +92,12 @@ typedef struct {
    double currentRate;
 } FTDIProgressInfo;
 
+
+typedef enum {
+   FTDI_CALLBACK_DATA,
+   FTDI_CALLBACK_PERIODICAL,
+   FTDI_CALLBACK_CLEANUP,
+} FTDICallbackType;
 
 /*
  * USB Constants
@@ -106,7 +129,7 @@ typedef struct {
 #define FTDI_LOG_PACKET_SIZE      9     // 512 == 1 << 9
 #define FTDI_HEADER_SIZE          2
 
-typedef int (FTDIStreamCallback)(FTDIDevice* dev, uint8_t *buffer, int length, FTDIProgressInfo *progress, void *userdata);
+typedef int (FTDIStreamCallback)(FTDIDevice* dev, FTDICallbackType cbtype, uint8_t *buffer, int length, FTDIProgressInfo *progress, void *userdata);
 
 
 /*

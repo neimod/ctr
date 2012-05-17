@@ -42,8 +42,10 @@
 	#define PACKETS_PER_TRANSFER 8
 	#define NUM_TRANSFERS 8
 #else
-	#define PACKETS_PER_TRANSFER 32
-	#define NUM_TRANSFERS 1024
+//	#define PACKETS_PER_TRANSFER 32
+//	#define NUM_TRANSFERS 1024
+	#define PACKETS_PER_TRANSFER 64
+	#define NUM_TRANSFERS 512
 #endif
 
 static unsigned int buffer_readle32(unsigned char* buffer, unsigned int* bufferpos, unsigned int buffersize)
@@ -80,20 +82,18 @@ static unsigned char* buffer_readdata(unsigned char* buffer, unsigned int* buffe
 /*
  * Private functions
  */
-static int HW_ReadCallback(FTDIDevice* dev, uint8_t *buffer, int length, FTDIProgressInfo *progress, void *userdata);
+static int HW_ReadCallback(FTDIDevice* dev, FTDICallbackType cbtype, uint8_t *buffer, int length, FTDIProgressInfo *progress, void *userdata);
 static void HW_SigintHandler(int signum);
 
 
-FILE* outputFile;
-bool exitRequested;
-HWCapture capture;
-HWPatchContext patchctx;
-HWConfig configctx;
+static FILE* outputFile;
+static bool exitRequested;
+static HWCapture capture;
+static HWPatchContext patchctx;
 
 void HW_Init()
 {
 	HW_PatchInit(&patchctx);
-	HW_ConfigInit(&configctx);
 }
 
 /*
@@ -357,7 +357,7 @@ void HW_Trace(FTDIDevice *dev, const char *filename)
 	// Capture data until we're interrupted.
 	signal(SIGINT, HW_SigintHandler);
 
-	HW_CaptureBegin(&capture, outputFile);
+	HW_CaptureBegin(&capture, outputFile, dev);
 
 	err = FTDIDevice_ReadStream(dev, FTDI_INTERFACE_A, HW_ReadCallback, NULL, PACKETS_PER_TRANSFER, NUM_TRANSFERS);
 	if (err < 0 && !exitRequested)
@@ -385,40 +385,35 @@ void HW_Trace(FTDIDevice *dev, const char *filename)
  *    file open.
  */
 
-static int HW_ReadCallback(FTDIDevice* dev, uint8_t *buffer, int length, FTDIProgressInfo *progress, void *userdata)
+static int HW_ReadCallback(FTDIDevice* dev, FTDICallbackType cbtype, uint8_t *buffer, int length, FTDIProgressInfo *progress, void *userdata)
 {
 	unsigned int pos = 0;
+   unsigned int canExit = 0;
 
-	if (length && outputFile) 
-		HW_CaptureDataBlock(&capture, buffer, length);
-
-	if (progress) 
-	{
-		double seconds = progress->totalTime;
-		double mb = progress->current.totalBytes / (1024.0 * 1024.0);
-		double mbcomp = capture.compressedsize / (1024.0 * 1024.0);
-
-		fprintf(stderr, "%10.02fs [ %9.3f/%.3f MB captured/compressed ] %7.1f kB/s current\r",
-			seconds, mb, mbcomp, progress->currentRate / 1024.0);
-	}
-	
-	if (kbhit())
-	{
-      static unsigned int clockspeed = 73;
-		char ch = getchar();
-		if (ch == 'i')
+   
+   if (exitRequested)
+   {
+      canExit = HW_CaptureTryStop(&capture);
+   }
+   else 
+   {
+      
+      if (length && outputFile) 
+         HW_CaptureDataBlock(&capture, buffer, length);
+      
+      if (progress) 
       {
-         HW_ConfigureClockSpeed(&configctx, dev, ++clockspeed);
-         printf("\rClock speed %d\n", clockspeed);
-      }
-		else if (ch == 'd')
-      {
-         HW_ConfigureClockSpeed(&configctx, dev, --clockspeed);
-         printf("\rClock speed %d\n", clockspeed);
-      }
-	}
+         double seconds = progress->totalTime;
+         double mb = progress->current.totalBytes / (1024.0 * 1024.0);
+         double mbcomp = capture.compressedsize / (1024.0 * 1024.0);
+         
+         fprintf(stderr, "%10.02fs [ %9.3f/%.3f MB captured/compressed ] %7.1f kB/s current\r",
+                 seconds, mb, mbcomp, progress->currentRate / 1024.0);
+      }      
+   }
 
-	return exitRequested ? 1 : 0;
+
+	return (exitRequested && canExit) ? 1 : 0;
 }
 
 
