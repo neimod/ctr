@@ -2,6 +2,7 @@
 #define _TMD_H_
 
 #include "types.h"
+#include "settings.h"
 
 #define TMD_MAX_CONTENTS 64
 
@@ -73,6 +74,7 @@ typedef struct
 	u32 size;
 	u8* buffer;
 	u8 content_hash_stat[64];
+	settings* usersettings;
 } tmd_context;
 
 
@@ -85,6 +87,7 @@ void tmd_init(tmd_context* ctx);
 void tmd_set_file(tmd_context* ctx, FILE* file);
 void tmd_set_offset(tmd_context* ctx, u32 offset);
 void tmd_set_size(tmd_context* ctx, u32 size);
+void tmd_set_usersettings(tmd_context* ctx, settings* usersettings);
 void tmd_print(tmd_context* ctx);
 void tmd_process(tmd_context* ctx, u32 actions);
 ctr_tmd_body *tmd_get_body(tmd_context *ctx);

@@ -39,10 +39,10 @@ typedef struct
 	key128 ncchctrkey;
 	rsakey2048 ncsdrsakey;
 	rsakey2048 ncchrsakey;
-	rsakey2048 nccholdrsakey;
-	rsakey2048 ncchdlprsakey;
-	rsakey2048 dlpoldrsakey;
-	rsakey2048 crrrsakey;
+//	rsakey2048 nccholdrsakey;
+//	rsakey2048 ncchdlprsakey;
+//	rsakey2048 dlpoldrsakey;
+//	rsakey2048 crrrsakey;
 } keyset;
 
 void keyset_init(keyset* keys);

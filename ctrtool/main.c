@@ -12,6 +12,7 @@
 #include "keyset.h"
 #include "exefs.h"
 #include "info.h"
+#include "settings.h"
 
 enum cryptotype
 {
@@ -27,11 +28,7 @@ typedef struct
 	u32 filetype;
 	FILE* infile;
 	u32 infilesize;
-	keyset keys;
-	ncch_context ncch;
-	cia_context cia;
-	exheader_context exheader;
-	tmd_context tmd;
+	settings usersettings;
 } toolcontext;
 
 static void usage(const char *argv0)
@@ -87,12 +84,10 @@ int main(int argc, char* argv[])
 	ctx.actions = InfoFlag | ExtractFlag;
 	ctx.filetype = FILETYPE_UNKNOWN;
 
-	keyset_init(&ctx.keys);
+	settings_init(&ctx.usersettings);
+	keyset_init(&ctx.usersettings.keys);
 	keyset_init(&tmpkeys);
-	ncch_init(&ctx.ncch);
-	cia_init(&ctx.cia);
-	exheader_init(&ctx.exheader);
-	tmd_init(&ctx.tmd);
+
 
 	while (1) 
 	{
@@ -175,16 +170,16 @@ int main(int argc, char* argv[])
 					ctx.filetype = FILETYPE_TMD;
 			break;
 
-			case 0: ncch_set_exefspath(&ctx.ncch, optarg); break;
-			case 1: ncch_set_romfspath(&ctx.ncch, optarg); break;
-			case 2: ncch_set_exheaderpath(&ctx.ncch, optarg); break;
-			case 3: cia_set_certspath(&ctx.cia, optarg); break;
-			case 4: cia_set_tikpath(&ctx.cia, optarg); break;
-			case 5: cia_set_tmdpath(&ctx.cia, optarg); break;
-			case 6: cia_set_contentpath(&ctx.cia, optarg); break;
-			case 7: cia_set_metapath(&ctx.cia, optarg); break;
-			case 8: ncch_set_exefsdirpath(&ctx.ncch, optarg); break;
-			case 9: ncch_set_mediaunitsize(&ctx.ncch, strtoul(optarg, 0, 0)); break;
+			case 0: settings_set_exefs_path(&ctx.usersettings, optarg); break;
+			case 1: settings_set_romfs_path(&ctx.usersettings, optarg); break;
+			case 2: settings_set_exheader_path(&ctx.usersettings, optarg); break;
+			case 3: settings_set_certs_path(&ctx.usersettings, optarg); break;
+			case 4: settings_set_tik_path(&ctx.usersettings, optarg); break;
+			case 5: settings_set_tmd_path(&ctx.usersettings, optarg); break;
+			case 6: settings_set_content_path(&ctx.usersettings, optarg); break;
+			case 7: settings_set_content_path(&ctx.usersettings, optarg); break;
+			case 8: settings_set_exefs_dir_path(&ctx.usersettings, optarg); break;
+			case 9: settings_set_mediaunit_size(&ctx.usersettings, strtoul(optarg, 0, 0)); break;
 			case 10: ctx.actions |= ShowKeysFlag; break;
 			case 11: keyset_parse_commonkey(&tmpkeys, optarg, strlen(optarg)); break;
 			case 12: keyset_parse_ncchctrkey(&tmpkeys, optarg, strlen(optarg)); break;
@@ -206,14 +201,15 @@ int main(int argc, char* argv[])
 		usage(argv[0]);
 	}
 
-	keyset_load(&ctx.keys, keysetfname, ctx.actions & VerboseFlag);
-	keyset_merge(&ctx.keys, &tmpkeys);
+	keyset_load(&ctx.usersettings.keys, keysetfname, ctx.actions & VerboseFlag);
+	keyset_merge(&ctx.usersettings.keys, &tmpkeys);
 	if (ctx.actions & ShowKeysFlag)
-		keyset_dump(&ctx.keys);
+		keyset_dump(&ctx.usersettings.keys);
 
 	ctx.infile = fopen(infname, "rb");
 
-	if (ctx.infile == 0) {
+	if (ctx.infile == 0) 
+	{
 		fprintf(stderr, "error: could not open input file! ('%s')\n", infname);
 		return -1;
 	}
@@ -222,19 +218,6 @@ int main(int argc, char* argv[])
 	ctx.infilesize = ftell(ctx.infile);
 	fseek(ctx.infile, 0, SEEK_SET);
 
-	ncch_set_file(&ctx.ncch, ctx.infile);
-	ncch_load_keys(&ctx.ncch, &ctx.keys);
-	cia_set_file(&ctx.cia, ctx.infile);
-	cia_set_offset(&ctx.cia, 0);
-	exheader_set_file(&ctx.exheader, ctx.infile);
-	exheader_set_offset(&ctx.exheader, 0);
-	exheader_set_ignoreprogramid(&ctx.exheader, 1);
-	tmd_set_file(&ctx.tmd, ctx.infile);
-	tmd_set_offset(&ctx.tmd, 0);
-	tmd_set_size(&ctx.tmd, ctx.infilesize);
-
-	if (ctx.keys.commonkey.valid)
-		cia_set_commonkey(&ctx.cia, ctx.keys.commonkey.data);
 
 
 
@@ -268,42 +251,83 @@ int main(int argc, char* argv[])
 		exit(1);
 	}
 	
-	if (ncchoffset == ~0)
-	{
-		if (ctx.filetype == FILETYPE_CCI)
-			ncch_set_offset(&ctx.ncch, 0x4000);
-		else if (ctx.filetype == FILETYPE_CXI)
-			ncch_set_offset(&ctx.ncch, 0);
-	}
+//	if (ncchoffset == ~0)
+//	{
+//		if (ctx.filetype == FILETYPE_CCI)
+//			ncch_set_offset(&ctx.ncch, 0x4000);
+//		else if (ctx.filetype == FILETYPE_CXI)
+//			ncch_set_offset(&ctx.ncch, 0);
+//	}
 
 	switch(ctx.filetype)
 	{
 		case FILETYPE_CCI:
 		{
-			//	if (ctx->filetype == FILETYPE_CCI)
-			//	{
-			//		unsigned char ncsdblob[0x200];
-			//
-			//		fseek(ctx->infile, 0, SEEK_SET);
-			//		fread(ncsdblob, 1, 0x200, ctx->infile);
-			//		ncsd_print(ncsdblob, 0x200, &ctx->keys);
-			//	}
+			ncsd_context ncsdctx;
+
+			ncsd_init(&ncsdctx);
+			ncsd_set_file(&ncsdctx, ctx.infile);
+			ncsd_set_size(&ncsdctx, ctx.infilesize);
+			ncsd_set_usersettings(&ncsdctx, &ctx.usersettings);
+			ncsd_process(&ncsdctx, ctx.actions);
+			
+			break;			
 		}
+		
 		case FILETYPE_CXI:
-			ncch_process(&ctx.ncch, ctx.actions);
-		break;
+		{
+			ncch_context ncchctx;
+
+			ncch_init(&ncchctx);
+			ncch_set_file(&ncchctx, ctx.infile);
+			ncch_set_size(&ncchctx, ctx.infilesize);
+			ncch_set_usersettings(&ncchctx, &ctx.usersettings);
+			ncch_process(&ncchctx, ctx.actions);
+
+			break;
+		}
+		
 
 		case FILETYPE_CIA:
-			cia_process(&ctx.cia, ctx.actions);
-		break;
+		{
+			cia_context ciactx;
+
+			cia_init(&ciactx);
+			cia_set_file(&ciactx, ctx.infile);
+			cia_set_size(&ciactx, ctx.infilesize);
+			cia_set_usersettings(&ciactx, &ctx.usersettings);
+			cia_process(&ciactx, ctx.actions);
+
+			break;
+		}
 
 		case FILETYPE_EXHEADER:
-			exheader_process(&ctx.exheader, ctx.actions);
-		break;
+		{
+			exheader_context exheaderctx;
+
+			exheader_init(&exheaderctx);
+			exheader_set_file(&exheaderctx, ctx.infile);
+			exheader_set_size(&exheaderctx, ctx.infilesize);
+			settings_set_ignore_programid(&ctx.usersettings, 1);
+
+			exheader_set_usersettings(&exheaderctx, &ctx.usersettings);
+			exheader_process(&exheaderctx, ctx.actions);
+	
+			break;
+		}
 
 		case FILETYPE_TMD:
-			tmd_process(&ctx.tmd, ctx.actions);
-		break;
+		{
+			tmd_context tmdctx;
+
+			tmd_init(&tmdctx);
+			tmd_set_file(&tmdctx, ctx.infile);
+			tmd_set_size(&tmdctx, ctx.infilesize);
+			tmd_set_usersettings(&tmdctx, &ctx.usersettings);
+			tmd_process(&tmdctx, ctx.actions);
+	
+			break;
+		}
 	}
 	
 	if (ctx.infile)

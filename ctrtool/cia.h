@@ -6,6 +6,7 @@
 #include "tik.h"
 #include "tmd.h"
 #include "ctr.h"
+#include "settings.h"
 
 typedef enum
 {
@@ -33,17 +34,12 @@ typedef struct
 {
 	FILE* file;
 	u32 offset;
-	u8 key[16];
+	u32 size;
 	u8 titlekey[16];
 	u8 iv[16];
-	int keyvalid;
 	ctr_ciaheader header;
-	filepath certspath;
-	filepath contentpath;
-	filepath tikpath;
-	filepath tmdpath;
-	filepath metapath;
 	ctr_aes_context aes;
+	settings* usersettings;
 
 	tik_context tik;
 	tmd_context tmd;
@@ -65,12 +61,8 @@ typedef struct
 void cia_init(cia_context* ctx);
 void cia_set_file(cia_context* ctx, FILE* file);
 void cia_set_offset(cia_context* ctx, u32 offset);
-void cia_set_commonkey(cia_context* ctx, u8 key[16]);
-void cia_set_certspath(cia_context* ctx, const char* path);
-void cia_set_contentpath(cia_context* ctx, const char* path);
-void cia_set_tikpath(cia_context* ctx, const char* path);
-void cia_set_tmdpath(cia_context* ctx, const char* path);
-void cia_set_metapath(cia_context* ctx, const char* path);
+void cia_set_size(cia_context* ctx, u32 size);
+void cia_set_usersettings(cia_context* ctx, settings* usersettings);
 void cia_print(cia_context* ctx);
 void cia_save(cia_context* ctx, u32 type, u32 flags);
 void cia_process(cia_context* ctx, u32 actions);

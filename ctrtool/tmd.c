@@ -26,6 +26,11 @@ void tmd_set_size(tmd_context* ctx, u32 size)
 	ctx->size = size;
 }
 
+void tmd_set_usersettings(tmd_context* ctx, settings* usersettings)
+{
+	ctx->usersettings = usersettings;
+}
+
 void tmd_process(tmd_context* ctx, u32 actions)
 {
 	if (ctx->buffer == 0)
@@ -43,7 +48,8 @@ void tmd_process(tmd_context* ctx, u32 actions)
 	}
 }
 
-ctr_tmd_body *tmd_get_body(tmd_context *ctx) {
+ctr_tmd_body *tmd_get_body(tmd_context *ctx) 
+{
 	unsigned int type = getbe32(ctx->buffer);
 	ctr_tmd_body *body = NULL;
 

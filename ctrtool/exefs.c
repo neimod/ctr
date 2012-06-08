@@ -11,7 +11,6 @@
 void exefs_init(exefs_context* ctx)
 {
 	memset(ctx, 0, sizeof(exefs_context));
-	filepath_init(&ctx->dirpath);
 }
 
 void exefs_set_file(exefs_context* ctx, FILE* file)
@@ -29,14 +28,9 @@ void exefs_set_size(exefs_context* ctx, u32 size)
 	ctx->size = size;
 }
 
-void exefs_set_key(exefs_context* ctx, u8 key[16])
+void exefs_set_usersettings(exefs_context* ctx, settings* usersettings)
 {
-	memcpy(ctx->key, key, 16);
-}
-
-void exefs_set_dirpath(exefs_context* ctx, const char* path)
-{
-	filepath_set(&ctx->dirpath, path);
+	ctx->usersettings = usersettings;
 }
 
 void exefs_set_partitionid(exefs_context* ctx, u8 partitionid[8])
@@ -61,11 +55,14 @@ void exefs_save(exefs_context* ctx, u32 index, u32 flags)
 	u32 decompressedsize = 0;
 	u8* compressedbuffer = 0;
 	u8* decompressedbuffer = 0;
-
+	filepath* dirpath = 0;
+	
+	
 	offset = getle32(section->offset) + sizeof(exefs_header);
 	size = getle32(section->size);
+	dirpath = settings_get_exefs_dir_path(ctx->usersettings);
 
-	if (size == 0)
+	if (size == 0 || dirpath == 0 || dirpath->valid == 0)
 		return;
 
 	if (size >= ctx->size)
@@ -77,7 +74,8 @@ void exefs_save(exefs_context* ctx, u32 index, u32 flags)
 	memset(name, 0, sizeof(name));
 	memcpy(name, section->name, 8);
 
-	memcpy(outfname, ctx->dirpath.pathname, MAX_PATH);
+	
+	memcpy(outfname, dirpath->pathname, MAX_PATH);
 	strcat(outfname, "/");
 
 	if (name[0] == '.')
@@ -94,9 +92,10 @@ void exefs_save(exefs_context* ctx, u32 index, u32 flags)
 		goto clean;
 	}
 	
+	
 
 	fseek(ctx->file, ctx->offset + offset, SEEK_SET);
-	ctr_init_ncch(&ctx->aes, ctx->key, ctx->partitionid, NCCHTYPE_EXEFS);
+	ctr_init_ncch(&ctx->aes, settings_get_ncch_key(ctx->usersettings), ctx->partitionid, NCCHTYPE_EXEFS);
 	ctr_add_counter(&ctx->aes, offset / 0x10);
 
 	if (index == 0 && ctx->compressedflag && ((flags & RawFlag) == 0))
@@ -180,7 +179,7 @@ void exefs_read_header(exefs_context* ctx, u32 flags)
 	fseek(ctx->file, ctx->offset, SEEK_SET);
 	fread(&ctx->header, 1, sizeof(exefs_header), ctx->file);
 
-	ctr_init_ncch(&ctx->aes, ctx->key, ctx->partitionid, NCCHTYPE_EXEFS);
+	ctr_init_ncch(&ctx->aes, settings_get_ncch_key(ctx->usersettings), ctx->partitionid, NCCHTYPE_EXEFS);
 
 	if (0 == (flags & PlainFlag))
 		ctr_crypt_counter(&ctx->aes, (u8*)&ctx->header, (u8*)&ctx->header, sizeof(exefs_header));
@@ -208,11 +207,16 @@ void exefs_process(exefs_context* ctx, u32 actions)
 		exefs_print(ctx);
 	}
 
-	if (actions & ExtractFlag && ctx->dirpath.valid)
+	if (actions & ExtractFlag)
 	{
-		makedir(ctx->dirpath.pathname);
-		for(i=0; i<8; i++)
-			exefs_save(ctx, i, actions);
+		filepath* dirpath = settings_get_exefs_dir_path(ctx->usersettings);
+
+		if (dirpath && dirpath->valid)
+		{
+			makedir(dirpath->pathname);
+			for(i=0; i<8; i++)
+				exefs_save(ctx, i, actions);
+		}
 	}
 }
 
@@ -232,7 +236,7 @@ int exefs_verify(exefs_context* ctx, u32 index, u32 flags)
 		return 0;
 
 	fseek(ctx->file, ctx->offset + offset, SEEK_SET);
-	ctr_init_ncch(&ctx->aes, ctx->key, ctx->partitionid, NCCHTYPE_EXEFS);
+	ctr_init_ncch(&ctx->aes, settings_get_ncch_key(ctx->usersettings), ctx->partitionid, NCCHTYPE_EXEFS);
 	ctr_add_counter(&ctx->aes, offset / 0x10);
 
 	ctr_sha_256_init(&ctx->sha);

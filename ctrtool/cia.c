@@ -12,11 +12,6 @@ void cia_init(cia_context* ctx)
 
 	tik_init(&ctx->tik);
 	tmd_init(&ctx->tmd);
-	filepath_init(&ctx->certspath);
-	filepath_init(&ctx->contentpath);
-	filepath_init(&ctx->metapath);
-	filepath_init(&ctx->tikpath);
-	filepath_init(&ctx->tmdpath);
 }
 
 void cia_set_file(cia_context* ctx, FILE* file)
@@ -29,35 +24,15 @@ void cia_set_offset(cia_context* ctx, u32 offset)
 	ctx->offset = offset;
 }
 
-void cia_set_commonkey(cia_context* ctx, u8 key[16])
+void cia_set_size(cia_context* ctx, u32 size)
 {
-	memcpy(ctx->key, key, 16);
-	ctx->keyvalid = 1;
+	ctx->size = size;
 }
 
-void cia_set_certspath(cia_context* ctx, const char* path)
-{
-	filepath_set(&ctx->certspath, path);
-}
 
-void cia_set_contentpath(cia_context* ctx, const char* path)
+void cia_set_usersettings(cia_context* ctx, settings* usersettings)
 {
-	filepath_set(&ctx->contentpath, path);
-}
-
-void cia_set_tikpath(cia_context* ctx, const char* path)
-{
-	filepath_set(&ctx->tikpath, path);
-}
-
-void cia_set_tmdpath(cia_context* ctx, const char* path)
-{
-	filepath_set(&ctx->tmdpath, path);
-}
-
-void cia_set_metapath(cia_context* ctx, const char* path)
-{
-	filepath_set(&ctx->metapath, path);
+	ctx->usersettings = usersettings;
 }
 
 
@@ -76,32 +51,32 @@ void cia_save(cia_context* ctx, u32 type, u32 flags)
 		case CIATYPE_CERTS:
 			offset = ctx->offsetcerts;
 			size = ctx->sizecert;
-			path = &ctx->certspath;
+			path = settings_get_certs_path(ctx->usersettings);
 		break;
 
 		case CIATYPE_TIK:
 			offset = ctx->offsettik;
 			size = ctx->sizetik;
-			path = &ctx->tikpath;
+			path = settings_get_tik_path(ctx->usersettings);
 		break;
 
 		case CIATYPE_TMD:
 			offset = ctx->offsettmd;
 			size = ctx->sizetmd;
-			path = &ctx->tmdpath;
+			path = settings_get_tmd_path(ctx->usersettings);
 		break;
 		
 		case CIATYPE_CONTENT:
 			offset = ctx->offsetcontent;
 			size = ctx->sizecontent;
-			path = &ctx->contentpath;
+			path = settings_get_content_path(ctx->usersettings);
 			
 		break;
 
 		case CIATYPE_META:
 			offset = ctx->offsetmeta;
 			size = ctx->sizemeta;
-			path = &ctx->metapath;
+			path = settings_get_meta_path(ctx->usersettings);;
 		break;
 
 		default:
@@ -225,21 +200,20 @@ void cia_process(cia_context* ctx, u32 actions)
 	tik_set_file(&ctx->tik, ctx->file);
 	tik_set_offset(&ctx->tik, ctx->offsettik);
 	tik_set_size(&ctx->tik, ctx->sizetik);
-
-	if (ctx->keyvalid)
-		tik_set_commonkey(&ctx->tik, ctx->key);
+	tik_set_usersettings(&ctx->tik, ctx->usersettings);
 
 	tik_process(&ctx->tik, actions);
 	memset(ctx->iv, 0, 16);
 
 	
 
-	if (ctx->keyvalid)
+	if (settings_is_common_key_valid(ctx->usersettings))
 		tik_get_decrypted_titlekey(&ctx->tik, ctx->titlekey);
 
 	tmd_set_file(&ctx->tmd, ctx->file);
 	tmd_set_offset(&ctx->tmd, ctx->offsettmd);
 	tmd_set_size(&ctx->tmd, ctx->sizetmd);
+	tmd_set_usersettings(&ctx->tmd, ctx->usersettings);
 	tmd_process(&ctx->tmd, actions);
 
 	if (actions & VerifyFlag)
@@ -276,7 +250,8 @@ void cia_verify_contents(cia_context *ctx)
 	chunk = (ctr_tmd_contentchunk*)(body->contentinfo + (sizeof(ctr_tmd_contentinfo) * TMD_MAX_CONTENTS));
 
 	fseek(ctx->file, ctx->offset + ctx->offsetcontent, SEEK_SET);
-	for(i = 0; i < getbe16(body->contentcount); i++) {
+	for(i = 0; i < getbe16(body->contentcount); i++) 
+	{
 		content_size = getbe64(chunk->size) & 0xffffffff;
 
 		ctx->iv[0] = (getbe16(chunk->index) >> 8) & 0xff;

@@ -26,9 +26,9 @@ void exheader_set_size(exheader_context* ctx, u32 size)
 	ctx->size = size;
 }
 
-void exheader_set_key(exheader_context* ctx, u8 key[16])
+void exheader_set_usersettings(exheader_context* ctx, settings* usersettings)
 {
-	memcpy(ctx->key, key, 16);
+	ctx->usersettings = usersettings;
 }
 
 void exheader_set_partitionid(exheader_context* ctx, u8 partitionid[8])
@@ -46,11 +46,6 @@ int exheader_get_compressedflag(exheader_context* ctx)
 	return ctx->compressedflag;
 }
 
-void exheader_set_ignoreprogramid(exheader_context* ctx, int enable)
-{
-	ctx->ignoreprogramid = enable;
-}
-
 
 int exheader_process(exheader_context* ctx, u32 actions)
 {
@@ -58,14 +53,14 @@ int exheader_process(exheader_context* ctx, u32 actions)
 	fread(&ctx->header, 1, sizeof(exheader_header), ctx->file);
 
 
-	ctr_init_ncch(&ctx->aes, ctx->key, ctx->partitionid, NCCHTYPE_EXHEADER);
+	ctr_init_ncch(&ctx->aes, settings_get_ncch_key(ctx->usersettings), ctx->partitionid, NCCHTYPE_EXHEADER);
 	if (0 == (actions & PlainFlag))
 		ctr_crypt_counter(&ctx->aes, (u8*)&ctx->header, (u8*)&ctx->header, sizeof(exheader_header));
 
 	if (ctx->header.codesetinfo.flags.flag & 1)
 		ctx->compressedflag = 1;
 
-	if (!ctx->ignoreprogramid)
+	if (!settings_get_ignore_programid(ctx->usersettings))
 	{
 		if (memcmp(ctx->header.arm11systemlocalcaps.programid, ctx->programid, 8))
 		{
