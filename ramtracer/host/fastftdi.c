@@ -515,8 +515,6 @@ int FTDIDevice_ReadStream(FTDIDevice *dev, FTDIInterface interface, FTDIStreamCa
       mssleep(1);
    }
    
-   printf("\n\nCleaning up\n\n");
-   
    /*
     * Cancel any outstanding transfers, and free memory.
     */

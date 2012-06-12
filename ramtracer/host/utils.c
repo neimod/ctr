@@ -1,3 +1,4 @@
+#include <stdlib.h>
 #ifdef _WIN32
 #include <windows.h>
 #include <time.h>
@@ -11,6 +12,58 @@
 #endif
 
 #include "utils.h"
+
+unsigned int buffer_readle32(unsigned char* buffer, unsigned int* bufferpos, unsigned int buffersize)
+{
+	unsigned char* p = buffer + *bufferpos;
+	
+	if (*bufferpos+4 > buffersize)
+	{
+		perror("buffer out of bounds");
+		exit(1);
+	}
+	*bufferpos += 4;
+	return p[0] | (p[1] << 8) | (p[2] << 16) | (p[3] << 24);
+}
+
+unsigned int buffer_readle16(unsigned char* buffer, unsigned int* bufferpos, unsigned int buffersize)
+{
+	unsigned char* p = buffer + *bufferpos;
+	
+	if (*bufferpos+2 > buffersize)
+	{
+		perror("buffer out of bounds");
+		exit(1);
+	}
+	*bufferpos += 2;
+	return p[0] | (p[1] << 8);
+}
+
+unsigned int buffer_readbyte(unsigned char* buffer, unsigned int* bufferpos, unsigned int buffersize)
+{
+	unsigned char* p = buffer + *bufferpos;
+	
+	if (*bufferpos+1 > buffersize)
+	{
+		perror("buffer out of bounds");
+		exit(1);
+	}
+	*bufferpos += 1;
+	return p[0];
+}
+
+unsigned char* buffer_readdata(unsigned char* buffer, unsigned int* bufferpos, unsigned int buffersize, unsigned int datasize)
+{
+	unsigned char* p = buffer + *bufferpos;
+	if (*bufferpos+datasize > buffersize)
+	{
+		perror("buffer out of bounds");
+		exit(1);
+	}
+	*bufferpos += datasize;
+	return p;
+}
+
 
 void mssleep(unsigned int millisecs)
 {
@@ -113,3 +166,4 @@ void changeterminal(int dir)
 	else
 		tcsetattr( STDIN_FILENO, TCSANOW, &oldt);
 }
+

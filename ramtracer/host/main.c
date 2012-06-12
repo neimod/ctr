@@ -59,7 +59,7 @@ int main(int argc, char **argv)
 	
    HW_Init();
 	
-	changeterminal(1);
+	//changeterminal(1);
 
    while (1) 
    {
@@ -124,7 +124,7 @@ int main(int argc, char **argv)
 
    FTDIDevice_Close(&dev);
    
-   changeterminal(0);
+   //changeterminal(0);
 
    return 0;
 }

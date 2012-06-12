@@ -34,107 +34,30 @@
 #include "utils.h"
 
 #define ZCHUNK (64 * 1024 * 1024)
-#define ZCOMPLEVEL 2
+//#define ZCOMPLEVEL 2
+#define ZCOMPLEVEL 1
 
-static HWBuffer configctx;
-static HWBuffer writefifo;
-static FILE* fifofile = 0;
+//static HWBuffer configctx;
+//static HWBuffer writefifo;
+//static FILE* fifofile = 0;
 
 // Private functions
 static void* HW_CaptureThread(void* arg);
 
-static void fix_data_order(unsigned int *mask, unsigned char *data)
-{
-	unsigned char input_data[8];
-   
-	*mask = ((*mask << 2) | (*mask >> 6)) & 0xFF;
-   
-	memcpy(input_data, data, 8);
-	data[0] = input_data[6];
-	data[1] = input_data[7];
-	data[2] = input_data[0];
-	data[3] = input_data[1];
-	data[4] = input_data[2];
-	data[5] = input_data[3];
-	data[6] = input_data[4];
-	data[7] = input_data[5];
-}
 
-int HW_ProcessSample(FTDIDevice* dev, uint8_t* sampledata)
-{
-   unsigned int header;
-	unsigned int address;
-	static unsigned int fifocount = 0;
-   
-	header = sampledata[0];
-	address = sampledata[1] | (sampledata[2]<<8) | (sampledata[3]<<16);
-   
-	if ( (header == 1) && (address == 0x7FFFE0))
-	{
-      unsigned char memdata[8];
-      unsigned int mask = sampledata[12];
-      static unsigned char testbuffer[4] = {1, 2, 3, 4};
-      
-		//fifocount++;
-		//fprintf(stdout, "\nFifo was read %d\n", fifocount);
-		
-      memcpy(memdata, sampledata+4, 8);
-      fix_data_order(&mask, memdata);
-      
-      if (memdata[0] == 0 && memdata[1] == 0 && memdata[2] == 0 && memdata[3] == 0)
-      {
-         if (fifofile)
-            fread(testbuffer, 1, 4, fifofile);
-         
-         HW_FifoWrite(&writefifo, testbuffer, 4);
-         
-      }
-	}
-}
-
-int HW_ProcessBlock(FTDIDevice* dev, uint8_t *buffer, int length)
-{
-	static unsigned int samplesize = 0;
-	static unsigned char sampledata[13];
-	
-	if (samplesize && (samplesize+length >= 13))
-	{
-		unsigned int readlen = 13-samplesize;
-		memcpy(sampledata+samplesize, buffer, readlen);
-		
-		HW_ProcessSample(dev, sampledata);
-		
-		length -= readlen;
-		samplesize = 0;
-		buffer += readlen;
-	}
-	
-	while(length >= 13)
-	{
-		HW_ProcessSample(dev, buffer);
-		
-		buffer += 13;
-		length -= 13;
-	}
-	
-	if (length)
-	{
-		memcpy(sampledata+samplesize, buffer, length);
-		samplesize += length;
-	}
-}
-
-void HW_CaptureBegin(HWCapture* capture, FILE* outputFile, FTDIDevice* dev)
+void HW_CaptureBegin(HWCapture* capture, FILE* outputFile, FTDIDevice* dev, int processenabled)
 {
 	int err;
 
-	HW_ConfigInit(&configctx);
-   HW_BufferInit(&writefifo, 16);
+//	HW_ConfigInit(&configctx);
+//   HW_BufferInit(&writefifo, 16);
 
 	capture->outputFile = outputFile;
 	capture->compressedsize = 0;
    capture->done = 0;
    capture->dev = dev;
+   
+   HW_ProcessInit(&capture->process, dev, processenabled);
 
 	if (outputFile == 0)
 		return;
@@ -150,6 +73,7 @@ void HW_CaptureBegin(HWCapture* capture, FILE* outputFile, FTDIDevice* dev)
 		exit(1);
 	}
 }
+
 
 unsigned int HW_CaptureTryStop(HWCapture* capture)
 {
@@ -220,16 +144,16 @@ static void* HW_CaptureThread(void* arg)
 	unsigned int have = 0;
 	
 
-   fifofile = fopen("fifo.bin", "rb");
-
-   {
-      unsigned char testbuffer[0x100];
+//   fifofile = fopen("fifo.bin", "rb");
+//
+//   {
+//      unsigned char testbuffer[0x100];
       
-      if (fifofile)
-         fread(testbuffer, 1, 0x100, fifofile);
+//      if (fifofile)
+//         fread(testbuffer, 1, 0x100, fifofile);
    
-      HW_FifoWrite(&writefifo, testbuffer, 0x100);
-   }
+//      HW_FifoWrite(&writefifo, testbuffer, 0x100);
+//   }
    
    
 	if (capture->outputFile == 0)
@@ -282,21 +206,9 @@ static void* HW_CaptureThread(void* arg)
 		
 		pthread_mutex_unlock(&capture->mutex);
       
+      
       if (node && (buffersize - bufferpos > 0))
-      {
-         HW_ProcessBlock(capture->dev, buffer + bufferpos, buffersize - bufferpos);
-         
-         if (writefifo.size)
-         {
-            int err = HW_ConfigDevice(capture->dev, &writefifo, 1);
-            
-            if (err == 0) {
-               HW_BufferClear(&writefifo);
-            } else {
-               printf("\nError write submit\n");
-            }
-         }
-      }
+         HW_Process(&capture->process, buffer + bufferpos, buffersize - bufferpos);
 		
 		if (node == 0 || available != 0)
 		{
@@ -448,7 +360,7 @@ static void* HW_CaptureThread(void* arg)
    
    capture->done = 1;
    
-   printf("\n\nThread stopped.\n\n");
+//   printf("Thread stopped.\n\n");
 
 	return 0;
 }

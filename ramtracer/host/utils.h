@@ -41,5 +41,9 @@
 void mssleep(unsigned int millisecs);
 int kbhit (void);
 void changeterminal(int dir);
+unsigned int buffer_readle32(unsigned char* buffer, unsigned int* bufferpos, unsigned int buffersize);
+unsigned int buffer_readle16(unsigned char* buffer, unsigned int* bufferpos, unsigned int buffersize);
+unsigned int buffer_readbyte(unsigned char* buffer, unsigned int* bufferpos, unsigned int buffersize);
+unsigned char* buffer_readdata(unsigned char* buffer, unsigned int* bufferpos, unsigned int buffersize, unsigned int datasize);
 
 #endif // __UTILS_H_

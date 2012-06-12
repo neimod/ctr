@@ -57,22 +57,23 @@ typedef struct {
  */
 
 
-HWBuffer*    HW_BufferAllocate(unsigned int size);
-void         HW_BufferClear(HWBuffer* node);
-unsigned int HW_BufferFill(HWBuffer* node, unsigned char* buffer, unsigned int size);
-void         HW_BufferReserve(HWBuffer* node, unsigned int size);
-void         HW_BufferInit(HWBuffer* node, unsigned int size);
-void         HW_BufferDestroy(HWBuffer* node);
-void         HW_BufferAppend(HWBuffer* node, unsigned char* buffer, unsigned int size);
-void         HW_BufferResize(HWBuffer* node, unsigned int size);
-void         HW_BufferGrow(HWBuffer* node, unsigned int minimumsize);
+HWBuffer*      HW_BufferAllocate(unsigned int size);
+void           HW_BufferClear(HWBuffer* node);
+unsigned int   HW_BufferFill(HWBuffer* node, unsigned char* buffer, unsigned int size);
+void           HW_BufferReserve(HWBuffer* node, unsigned int size);
+void           HW_BufferInit(HWBuffer* node, unsigned int size);
+void           HW_BufferDestroy(HWBuffer* node);
+void           HW_BufferAppend(HWBuffer* node, const void* buffer, unsigned int size);
+void           HW_BufferResize(HWBuffer* node, unsigned int size);
+void           HW_BufferGrow(HWBuffer* node, unsigned int minimumsize);
+void           HW_BufferRemoveFront(HWBuffer* node, unsigned int size);
 
-void         HW_BufferChainInit(HWBufferChain* chain);
-HWBuffer*    HW_BufferChainGetFirst(HWBufferChain* chain);
-HWBuffer*    HW_BufferChainGetLast(HWBufferChain* chain);
-HWBuffer*    HW_BufferChainRemoveFirst(HWBufferChain* chain);
-void         HW_BufferChainDestroyFirst(HWBufferChain* chain);
-void         HW_BufferChainAppend(HWBufferChain* chain, HWBuffer* node);
-HWBuffer*    HW_BufferChainAppendNew(HWBufferChain* chain);
+void           HW_BufferChainInit(HWBufferChain* chain);
+HWBuffer*      HW_BufferChainGetFirst(HWBufferChain* chain);
+HWBuffer*      HW_BufferChainGetLast(HWBufferChain* chain);
+HWBuffer*      HW_BufferChainRemoveFirst(HWBufferChain* chain);
+void           HW_BufferChainDestroyFirst(HWBufferChain* chain);
+void           HW_BufferChainAppend(HWBufferChain* chain, HWBuffer* node);
+HWBuffer*      HW_BufferChainAppendNew(HWBufferChain* chain);
 
 #endif // __HW_BUFFER_H_

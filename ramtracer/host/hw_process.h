@@ -1,5 +1,5 @@
 /*
- * hw_capture.h - Real-time capture processing of RAM tracing data.
+ * hw_process.h - Processing of RAM tracing data.
  *
  * Copyright (C) 2012 neimod
  *
@@ -22,40 +22,45 @@
  * THE SOFTWARE.
  */
 
-#ifndef __HW_CAPTURE_H_
-#define __HW_CAPTURE_H_
+#ifndef __HW_PROCESS_H_
+#define __HW_PROCESS_H_
 
 #include <stdio.h>
 #include <pthread.h>
 #include "hw_buffer.h"
 #include "fastftdi.h"
-#include "hw_process.h"
-
 /*
  * HWCapture -- Worker structure for a seperately running thread that does heavy processing
  *              on real-time captured RAM tracing data, such as compression and saving to disk. 
  */
 
+#define MAXFILES 16
 
 typedef struct
 {
-	FILE* outputFile;
-	unsigned int running;
-   unsigned int done;
-	unsigned int compressedsize;
-	pthread_t thread;
-	pthread_mutex_t mutex;
-	HWBufferChain chain;
+   FILE* file;
+   int used;
+} filenode;
+
+typedef struct
+{
+   unsigned int writefifocapacity;
+   HWBuffer config;   
+   HWBuffer writefifo;
+   HWBuffer readfifo;   
+   HWBuffer databuffer;
    FTDIDevice* dev;
-   HWProcess process;
-} HWCapture;
+   int enabled;
+   filenode filemap[MAXFILES];
+} HWProcess;
 
 /*
  * Public functions
  */
-void HW_CaptureBegin(HWCapture* capture, FILE* outputFile, FTDIDevice* dev, int processenabled);
-unsigned int HW_CaptureTryStop(HWCapture* capture);
-void HW_CaptureFinish(HWCapture* capture);
-void HW_CaptureDataBlock(HWCapture* capture, uint8_t* buffer, unsigned int length);
+void HW_ProcessInit(HWProcess* process, FTDIDevice* dev, int enabled);
+void HW_ProcessDestroy(HWProcess* process);
+void HW_Process(HWProcess* process, unsigned char* buffer, unsigned int buffersize);
+int HW_ProcessSample(HWProcess* process, uint8_t* sampledata);
+int HW_ProcessBlock(HWProcess* process, uint8_t *buffer, int length);
 
-#endif // __HW_CAPTURE_H_
+#endif // __HW_PROCESS_H_

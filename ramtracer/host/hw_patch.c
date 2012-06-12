@@ -41,6 +41,7 @@
 #define PATCHTRIGGERDATAUPPER	0x5
 #define SETCLOCK	0x6
 #define WRITEFIFO	0x7
+#define PATCHHOOKENABLE	0x8
 
 
 void HW_PatchInit(HWPatchContext* ctx)
@@ -68,6 +69,7 @@ void HW_PatchInit(HWPatchContext* ctx)
 	ctx->currententryindex = 0;
 	ctx->currentdatawordindex = 0;
 	ctx->mode = 0;
+   ctx->hookenabled = 0;
 }
 
 void HW_SetPatchingMode(HWPatchContext* ctx, int enabled)
@@ -75,6 +77,10 @@ void HW_SetPatchingMode(HWPatchContext* ctx, int enabled)
 	ctx->mode = enabled;
 }
 
+void HW_SetPatchFifoHook(HWPatchContext* ctx, int enabled)
+{
+	ctx->hookenabled = enabled;
+}
 
 // Sets an address range of a RAM address that needs to be patched, translated into a patch CAM entry
 void HW_SetPatchAddress(HWPatchContext* ctx, unsigned int index, unsigned int address, unsigned int mask)
@@ -224,6 +230,7 @@ void HW_PatchDevice(HWPatchContext* ctx, FTDIDevice *dev)
 	HW_ConfigAddressWrite(&buffer, PATCHTRIGGERBYPASS, ctx->trigger.bypassaddress);
 	HW_ConfigAddressWrite(&buffer, PATCHTRIGGERDATALOWER, ctx->trigger.datalo);	
 	HW_ConfigAddressWrite(&buffer, PATCHTRIGGERDATAUPPER, ctx->trigger.datahi);
+	HW_ConfigAddressWrite(&buffer, PATCHHOOKENABLE, ctx->hookenabled);
 
 	HW_ConfigDevice(dev, &buffer, false);
 

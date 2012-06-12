@@ -48,35 +48,12 @@
 	#define NUM_TRANSFERS 512
 #endif
 
-static unsigned int buffer_readle32(unsigned char* buffer, unsigned int* bufferpos, unsigned int buffersize)
-{
-	unsigned char* p = buffer + *bufferpos;
-	
-	if (*bufferpos+4 > buffersize)
-	{
-		perror("buffer out of bounds");
-		exit(1);
-	}
-	*bufferpos += 4;
-	return p[0] | (p[1] << 8) | (p[2] << 16) | (p[3] << 24);
-}
-
-static unsigned char* buffer_readdata(unsigned char* buffer, unsigned int* bufferpos, unsigned int buffersize, unsigned int datasize)
-{
-	unsigned char* p = buffer + *bufferpos;
-	if (*bufferpos+datasize > buffersize)
-	{
-		perror("buffer out of bounds");
-		exit(1);
-	}
-	*bufferpos += datasize;
-	return p;
-}
 
 
 #define PATCHTAG_WRITETRIGGER		0xB00B0000
-#define PATCHTAG_BYPASSTRIGGER		0xB00B0001
+#define PATCHTAG_BYPASSTRIGGER	0xB00B0001
 #define PATCHTAG_ADDPATCH			0xB00B0002
+#define PATCHTAG_PROCESSENABLE	0xB00B0003
 
 
 /*
@@ -88,6 +65,7 @@ static void HW_SigintHandler(int signum);
 
 static FILE* outputFile;
 static bool exitRequested;
+static bool processEnabled = 0;
 static HWCapture capture;
 static HWPatchContext patchctx;
 
@@ -247,6 +225,11 @@ void HW_LoadPatchFile(const char* filename)
 					unsigned char* patchdata;
 					switch(tag) 
 					{
+                  case PATCHTAG_PROCESSENABLE:
+                     processEnabled = 1;
+                     HW_SetPatchFifoHook(&patchctx, 1);
+                     printf("PATCH: Enabling real-time processing.\n");
+                     break;                     
 						case PATCHTAG_WRITETRIGGER: 
 							triggeraddress = buffer_readle32(buffer, &bufferpos, buffersize) & 0x0FFFFFFF;
 							triggercount = buffer_readle32(buffer, &bufferpos, buffersize);
@@ -357,7 +340,7 @@ void HW_Trace(FTDIDevice *dev, const char *filename)
 	// Capture data until we're interrupted.
 	signal(SIGINT, HW_SigintHandler);
 
-	HW_CaptureBegin(&capture, outputFile, dev);
+	HW_CaptureBegin(&capture, outputFile, dev, processEnabled);
 
 	err = FTDIDevice_ReadStream(dev, FTDI_INTERFACE_A, HW_ReadCallback, NULL, PACKETS_PER_TRANSFER, NUM_TRANSFERS);
 	if (err < 0 && !exitRequested)
@@ -406,9 +389,12 @@ static int HW_ReadCallback(FTDIDevice* dev, FTDICallbackType cbtype, uint8_t *bu
          double seconds = progress->totalTime;
          double mb = progress->current.totalBytes / (1024.0 * 1024.0);
          double mbcomp = capture.compressedsize / (1024.0 * 1024.0);
+         char x[512];
          
-         fprintf(stderr, "%10.02fs [ %9.3f/%.3f MB captured/compressed ] %7.1f kB/s current\r",
+         fprintf(stderr, "\e]2;%10.02fs [ %9.3f/%.3f MB captured/compressed ] %7.1f kB/s current\a",
                  seconds, mb, mbcomp, progress->currentRate / 1024.0);
+         fflush(stderr);
+         fflush(stdout);         
       }      
    }
 

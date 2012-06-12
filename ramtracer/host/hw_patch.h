@@ -29,7 +29,7 @@
 #include "fastftdi.h"
 #include "hw_config.h"
 
-#define HWCAMENTRYCOUNT 16
+#define HWCAMENTRYCOUNT 32
 #define	HWPATCHDATASIZE (16 * 1024)
 
 /*
@@ -71,7 +71,7 @@ typedef struct {
 	unsigned int currententryindex;
 	unsigned int currentdatawordindex;
 	int mode;
-	
+   unsigned int hookenabled;	
 } HWPatchContext;
 
 /*
@@ -86,6 +86,7 @@ void HW_PatchDevice(HWPatchContext* ctx, FTDIDevice *dev);
 void HW_SetPatchWriteTrigger(HWPatchContext* ctx, unsigned int address, unsigned int count, unsigned char* word);
 void HW_SetPatchTriggerBypass(HWPatchContext* ctx, unsigned int address);
 void HW_SetPatchingMode(HWPatchContext* ctx, int enabled);
+void HW_SetPatchFifoHook(HWPatchContext* ctx, int enabled);
 void HW_ConfigureClockSpeed(HWBuffer* buffer, FTDIDevice* dev, int clockspeed);
 void HW_FifoWrite(HWBuffer* buffer, const unsigned char* data, unsigned int size);
 

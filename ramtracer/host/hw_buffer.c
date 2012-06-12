@@ -62,6 +62,20 @@ void HW_BufferClear(HWBuffer* node)
    node->pos = 0;
 }
 
+void HW_BufferRemoveFront(HWBuffer* node, unsigned int size)
+{
+   unsigned int available = node->size - node->pos;
+   
+   if (size > available)
+      size = available;
+   
+   memmove(node->buffer, node->buffer + node->pos + size, available - size);
+   
+   node->size = available - size;
+   node->pos = 0;
+}
+
+
 // Fill buffer data -- only up to the capacity of the HWBuffer
 unsigned int HW_BufferFill(HWBuffer* node, unsigned char* buffer, unsigned int size)
 {
@@ -78,7 +92,7 @@ unsigned int HW_BufferFill(HWBuffer* node, unsigned char* buffer, unsigned int s
 }
 
 // Append buffer data -- allow growing of buffer
-void HW_BufferAppend(HWBuffer* node, unsigned char* buffer, unsigned int size)
+void HW_BufferAppend(HWBuffer* node, const void* buffer, unsigned int size)
 {
    unsigned int available = node->capacity - node->size;
    
