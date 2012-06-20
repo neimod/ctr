@@ -17,11 +17,13 @@ typedef struct
 	filepath tikpath;
 	filepath tmdpath;
 	filepath metapath;	
+	filepath lzsspath;
 	unsigned int mediaunitsize;
 	int ignoreprogramid;
 } settings;
 
 void settings_init(settings* usersettings);
+filepath* settings_get_lzss_path(settings* usersettings);
 filepath* settings_get_exefs_path(settings* usersettings);
 filepath* settings_get_romfs_path(settings* usersettings);
 filepath* settings_get_exheader_path(settings* usersettings);
@@ -37,6 +39,7 @@ unsigned char* settings_get_common_key(settings* usersettings);
 int settings_is_common_key_valid(settings* usersettings);
 int settings_get_ignore_programid(settings* usersettings);
 
+void settings_set_lzss_path(settings* usersettings, const char* path);
 void settings_set_exefs_path(settings* usersettings, const char* path);
 void settings_set_romfs_path(settings* usersettings, const char* path);
 void settings_set_exheader_path(settings* usersettings, const char* path);

@@ -9,6 +9,7 @@
 #include "cia.h"
 #include "tmd.h"
 #include "tik.h"
+#include "lzss.h"
 #include "keyset.h"
 #include "exefs.h"
 #include "info.h"
@@ -52,6 +53,8 @@ static void usage(const char *argv0)
 		   "  --ncchctrkey=key   Set ncchctr key.\n"
 		   "  --showkeys         Show the keys being used.\n"
 		   "  -t, --intype=type	 Specify input file type [ncsd, ncch, exheader, cia, tmd]\n"
+		   "LZSS options:\n"
+		   "  --lzssout=file	 Specify lzss output file\n"
 		   "CXI/CCI options:\n"
 		   "  -n, --ncch=offs    Specify offset for NCCH header.\n"
 		   "  --exefs=file       Specify ExeFS file path.\n"
@@ -116,6 +119,7 @@ int main(int argc, char* argv[])
 			{"commonkey", 1, NULL, 11},
 			{"ncchctrkey", 1, NULL, 12},
 			{"intype", 1, NULL, 't'},
+			{"lzssout", 1, NULL, 13},
 			{NULL},
 		};
 
@@ -168,6 +172,8 @@ int main(int argc, char* argv[])
 					ctx.filetype = FILETYPE_CIA;
 				else if (!strcmp(optarg, "tmd"))
 					ctx.filetype = FILETYPE_TMD;
+				else if (!strcmp(optarg, "lzss"))
+					ctx.filetype = FILETYPE_LZSS;
 			break;
 
 			case 0: settings_set_exefs_path(&ctx.usersettings, optarg); break;
@@ -183,6 +189,7 @@ int main(int argc, char* argv[])
 			case 10: ctx.actions |= ShowKeysFlag; break;
 			case 11: keyset_parse_commonkey(&tmpkeys, optarg, strlen(optarg)); break;
 			case 12: keyset_parse_ncchctrkey(&tmpkeys, optarg, strlen(optarg)); break;
+			case 13: settings_set_lzss_path(&ctx.usersettings, optarg); break;
 
 
 			default:
@@ -325,6 +332,19 @@ int main(int argc, char* argv[])
 			tmd_set_size(&tmdctx, ctx.infilesize);
 			tmd_set_usersettings(&tmdctx, &ctx.usersettings);
 			tmd_process(&tmdctx, ctx.actions);
+	
+			break;
+		}
+
+		case FILETYPE_LZSS:
+		{
+			lzss_context lzssctx;
+
+			lzss_init(&lzssctx);
+			lzss_set_file(&lzssctx, ctx.infile);
+			lzss_set_size(&lzssctx, ctx.infilesize);
+			lzss_set_usersettings(&lzssctx, &ctx.usersettings);
+			lzss_process(&lzssctx, ctx.actions);
 	
 			break;
 		}

@@ -11,6 +11,14 @@ void settings_init(settings* usersettings)
 	usersettings->mediaunitsize = 0x200;
 }
 
+filepath* settings_get_lzss_path(settings* usersettings)
+{
+	if (usersettings)
+		return &usersettings->lzsspath;
+	else
+		return 0;
+}
+
 filepath* settings_get_exefs_path(settings* usersettings)
 {
 	if (usersettings)
@@ -123,6 +131,11 @@ int settings_get_ignore_programid(settings* usersettings)
 		return usersettings->ignoreprogramid;
 	else
 		return 0;
+}
+
+void settings_set_lzss_path(settings* usersettings, const char* path)
+{
+	filepath_set(&usersettings->lzsspath, path);
 }
 
 void settings_set_exefs_path(settings* usersettings, const char* path)
