@@ -44,7 +44,7 @@ void exefs_set_size(exefs_context* ctx, u32 size);
 void exefs_set_usersettings(exefs_context* ctx, settings* usersettings);
 void exefs_set_partitionid(exefs_context* ctx, u8 partitionid[8]);
 void exefs_set_compressedflag(exefs_context* ctx, int compressedflag);
-void exefs_read_header(exefs_context* ctx);
+void exefs_read_header(exefs_context* ctx, u32 flags);
 void exefs_calculate_hash(exefs_context* ctx, u8 hash[32]);
 void exefs_process(exefs_context* ctx, u32 actions);
 void exefs_print(exefs_context* ctx);

@@ -256,9 +256,10 @@ void ncch_process(ncch_context* ctx, u32 actions)
 int ncch_signature_verify(const ctr_ncchheader* header, rsakey2048* key)
 {
 	u8 hash[0x20];
-	u8 output[0x100];
 
 #if 0
+	u8 output[0x100];
+
 	ctr_rsa_public(header->signature, output, key);
 	memdump(stdout, "RSA decrypted:      ", output, 0x100);
 #endif
@@ -313,7 +314,6 @@ void ncch_print(ncch_context* ctx)
 	char magic[5];
 	char productcode[0x11];
 	ctr_ncchheader *header = &ctx->header;
-	int sigcheck = 0;
 	u32 offset = ctx->offset;
 	u32 mediaunitsize = settings_get_mediaunit_size(ctx->usersettings);
 

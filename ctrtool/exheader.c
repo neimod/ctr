@@ -132,7 +132,7 @@ void exheader_print_arm11kernelcapabilities(exheader_context* ctx)
 		if ((descriptor & (0x1f<<27)) == (0x1e<<27))
 			systemcallmask[(descriptor>>24) & 7] = descriptor & 0x00FFFFFF;
 		else if ((descriptor & (0x7f<<25)) == (0x7e<<25))
-			fprintf(stdout, "Kernel release version: %d.%d\n", (descriptor>>8)&0xFF, (descriptor>>0)&0xFF, descriptor);
+			fprintf(stdout, "Kernel release version: %d.%d\n", (descriptor>>8)&0xFF, (descriptor>>0)&0xFF);
 		else if ((descriptor & (0xf<<28)) == (0xe<<28))
 		{
 			for(j=0; j<4; j++)
@@ -252,7 +252,6 @@ void exheader_print_arm11kernelcapabilities(exheader_context* ctx)
 void exheader_print(exheader_context* ctx)
 {
 	u32 i;
-	unsigned int enabledsvccounter = 0;
 	char name[9];
 	char service[9];
 	exheader_codesetinfo* codesetinfo = &ctx->header.codesetinfo;

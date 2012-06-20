@@ -307,6 +307,7 @@ void ctr_rsa_free(ctr_rsa_context* ctx)
 /*
  * Generate DP, DQ, QP based on private key
  */ 
+#if 0
 static int ctr_rsa_key_init(ctr_rsa_context* ctx )
 {
     int ret;
@@ -338,3 +339,4 @@ cleanup:
 
     return( 0 );   
 }
+#endif

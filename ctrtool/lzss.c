@@ -100,7 +100,7 @@ u32 lzss_get_decompressed_size(u8* compressed, u32 compressedsize)
 {
 	u8* footer = compressed + compressedsize - 8;
 
-	u32 buffertopandbottom = getle32(footer+0);
+	//u32 buffertopandbottom = getle32(footer+0);
 	u32 originalbottom = getle32(footer+4);
 
 	return originalbottom + compressedsize;
@@ -110,7 +110,7 @@ int lzss_decompress(u8* compressed, u32 compressedsize, u8* decompressed, u32 de
 {
 	u8* footer = compressed + compressedsize - 8;
 	u32 buffertopandbottom = getle32(footer+0);
-	u32 originalbottom = getle32(footer+4);
+	//u32 originalbottom = getle32(footer+4);
 	u32 i, j;
 	u32 out = decompressedsize;
 	u32 index = compressedsize - ((buffertopandbottom>>24)&0xFF);
