@@ -34,10 +34,56 @@ void ncch_set_file(ncch_context* ctx, FILE* file)
 	ctx->file = file;
 }
 
+int ncch_encrypted(ncch_context* ctx, u32 flags)
+{
+	if (flags & PlainFlag)
+		return 0;
+		
+	if (ctx->header.flags[7] & 4)
+		return 0;
+	
+	return 1;
+}
+
+void ncch_get_counter(ncch_context* ctx, u8 counter[16], u8 type)
+{
+	u32 version = getle16(ctx->header.version);
+	u32 mediaunitsize = ncch_get_mediaunit_size(ctx);
+	u8* partitionid = ctx->header.partitionid;
+	u32 i;
+	u32 x = 0;
+
+	memset(counter, 0, 16);
+
+	if (version == 2)
+	{
+		for(i=0; i<8; i++)
+			counter[i] = partitionid[7-i];
+		counter[8] = type;
+	}
+	else if (version == 1)
+	{
+		if (type == NCCHTYPE_EXHEADER)
+			x = 0x200;
+		else if (type == NCCHTYPE_EXEFS)
+			x = getle32(ctx->header.exefsoffset) * mediaunitsize;
+		else if (type == NCCHTYPE_ROMFS)
+			x = getle32(ctx->header.romfsoffset) * mediaunitsize;
+
+		for(i=0; i<8; i++)
+			counter[i] = partitionid[i];
+		for(i=0; i<4; i++)
+			counter[12+i] = x>>((3-i)*8);
+	}
+}
+
+
+
 int ncch_extract_prepare(ncch_context* ctx, u32 type, u32 flags)
 {
 	u32 offset = 0;
 	u32 size = 0;
+	u8 counter[16];
 
 
 	switch(type)
@@ -74,7 +120,8 @@ int ncch_extract_prepare(ncch_context* ctx, u32 type, u32 flags)
 	ctx->extractsize = size;
 	ctx->extractflags = flags;
 	fseek(ctx->file, offset, SEEK_SET);
-	ctr_init_ncch(&ctx->aes, ctx->key, ctx->header.partitionid, type);
+	ncch_get_counter(ctx, counter, type);
+	ctr_init_counter(&ctx->aes, ctx->key, counter);
 
 	return 1;
 
@@ -99,7 +146,7 @@ int ncch_extract_buffer(ncch_context* ctx, u8* buffer, u32 buffersize, u32* outs
 			goto clean;
 		}
 
-		if (0 == (ctx->extractflags & PlainFlag))
+		if (ncch_encrypted(ctx, ctx->extractflags))
 			ctr_crypt_counter(&ctx->aes, buffer, buffer, max);
 
 		ctx->extractsize -= max;
@@ -169,7 +216,7 @@ clean:
 
 void ncch_verify_hashes(ncch_context* ctx, u32 flags)
 {
-	u32 mediaunitsize = settings_get_mediaunit_size(ctx->usersettings);
+	u32 mediaunitsize = ncch_get_mediaunit_size(ctx);
 	u32 exefshashregionsize = getle32(ctx->header.exefshashregionsize) * mediaunitsize;
 	u32 romfshashregionsize = getle32(ctx->header.romfshashregionsize) * mediaunitsize;
 	u32 exheaderhashregionsize = getle32(ctx->header.extendedheadersize) * mediaunitsize;
@@ -209,10 +256,19 @@ clean:
 	return;
 }
 
+
 void ncch_process(ncch_context* ctx, u32 actions)
 {
+	u8 exheadercounter[16];
+	u8 exefscounter[16];
+
+
 	fseek(ctx->file, ctx->offset, SEEK_SET);
 	fread(&ctx->header, 1, 0x200, ctx->file);
+
+	ncch_get_counter(ctx, exheadercounter, NCCHTYPE_EXHEADER);
+	ncch_get_counter(ctx, exefscounter, NCCHTYPE_EXEFS);
+
 
 	exheader_set_file(&ctx->exheader, ctx->file);
 	exheader_set_offset(&ctx->exheader, ncch_get_exheader_offset(ctx) );
@@ -220,12 +276,16 @@ void ncch_process(ncch_context* ctx, u32 actions)
 	exheader_set_usersettings(&ctx->exheader, ctx->usersettings);
 	exheader_set_partitionid(&ctx->exheader, ctx->header.partitionid);
 	exheader_set_programid(&ctx->exheader, ctx->header.programid);
+	exheader_set_counter(&ctx->exheader, exheadercounter);
+	exheader_set_cryptoflag(&ctx->exheader, ctx->header.flags[7]);
 
 	exefs_set_file(&ctx->exefs, ctx->file);
 	exefs_set_offset(&ctx->exefs, ncch_get_exefs_offset(ctx) );
 	exefs_set_size(&ctx->exefs, ncch_get_exefs_size(ctx) );
 	exefs_set_partitionid(&ctx->exefs, ctx->header.partitionid);
 	exefs_set_usersettings(&ctx->exefs, ctx->usersettings);
+	exefs_set_counter(&ctx->exefs, exefscounter);
+	exefs_set_cryptoflag(&ctx->exefs, ctx->header.flags[7]);
 
 	if (actions & VerifyFlag)
 	{
@@ -277,25 +337,25 @@ int ncch_signature_verify(const ctr_ncchheader* header, rsakey2048* key)
 
 u32 ncch_get_exefs_offset(ncch_context* ctx)
 {
-	u32 mediaunitsize = settings_get_mediaunit_size(ctx->usersettings);
+	u32 mediaunitsize = ncch_get_mediaunit_size(ctx);
 	return ctx->offset + getle32(ctx->header.exefsoffset) * mediaunitsize;
 }
 
 u32 ncch_get_exefs_size(ncch_context* ctx)
 {
-	u32 mediaunitsize = settings_get_mediaunit_size(ctx->usersettings);
+	u32 mediaunitsize = ncch_get_mediaunit_size(ctx);
 	return getle32(ctx->header.exefssize) * mediaunitsize;
 }
 
 u32 ncch_get_romfs_offset(ncch_context* ctx)
 {
-	u32 mediaunitsize = settings_get_mediaunit_size(ctx->usersettings);
+	u32 mediaunitsize = ncch_get_mediaunit_size(ctx);
 	return ctx->offset + getle32(ctx->header.romfsoffset) * mediaunitsize;
 }
 
 u32 ncch_get_romfs_size(ncch_context* ctx)
 {
-	u32 mediaunitsize = settings_get_mediaunit_size(ctx->usersettings);
+	u32 mediaunitsize = ncch_get_mediaunit_size(ctx);
 	return getle32(ctx->header.romfssize) * mediaunitsize;
 }
 
@@ -309,13 +369,29 @@ u32 ncch_get_exheader_size(ncch_context* ctx)
 	return getle32(ctx->header.extendedheadersize);
 }
 
+u32 ncch_get_mediaunit_size(ncch_context* ctx)
+{
+	unsigned int mediaunitsize = settings_get_mediaunit_size(ctx->usersettings);
+
+	if (mediaunitsize == 0)
+	{
+		unsigned short version = getle16(ctx->header.version);
+		if (version == 1)
+			mediaunitsize = 1;
+		else if (version == 2)
+			mediaunitsize = 1 << (ctx->header.flags[6] + 9);
+	}
+
+	return mediaunitsize;
+}
+
 void ncch_print(ncch_context* ctx)
 {
 	char magic[5];
 	char productcode[0x11];
 	ctr_ncchheader *header = &ctx->header;
 	u32 offset = ctx->offset;
-	u32 mediaunitsize = settings_get_mediaunit_size(ctx->usersettings);
+	u32 mediaunitsize = ncch_get_mediaunit_size(ctx);
 
 
 	fprintf(stdout, "\nNCCH:\n");
@@ -346,6 +422,14 @@ void ncch_print(ncch_context* ctx)
 	else
 		memdump(stdout, "Exheader hash (FAIL):   ", header->extendedheaderhash, 0x20);
 	fprintf(stdout, "Flags:                  %016llx\n", getle64(header->flags));
+	fprintf(stdout, " > Mediaunit size:      0x%x\n", mediaunitsize);
+	if (header->flags[7] & 4)
+		fprintf(stdout, " > Crypto key:          None\n");
+	else if (header->flags[7] & 1)
+		fprintf(stdout, " > Crypto key:          Zeros\n");
+	else
+		fprintf(stdout, " > Crypto key:          Secure\n");
+
 	fprintf(stdout, "Plain region offset:    0x%08x\n", getle32(header->plainregionsize)? offset+getle32(header->plainregionoffset)*mediaunitsize : 0);
 	fprintf(stdout, "Plain region size:      0x%08x\n", getle32(header->plainregionsize)*mediaunitsize);
 	fprintf(stdout, "ExeFS offset:           0x%08x\n", getle32(header->exefssize)? offset+getle32(header->exefsoffset)*mediaunitsize : 0);

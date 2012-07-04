@@ -50,5 +50,6 @@ void ncsd_set_usersettings(ncsd_context* ctx, settings* usersettings);
 int ncsd_signature_verify(const void* blob, rsakey2048* key);
 void ncsd_process(ncsd_context* ctx, u32 actions);
 void ncsd_print(ncsd_context* ctx);
+unsigned int ncsd_get_mediaunit_size(ncsd_context* ctx);
 
 #endif // _NCSD_H_

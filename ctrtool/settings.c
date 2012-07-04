@@ -7,8 +7,6 @@ static unsigned char nullkey[16] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 void settings_init(settings* usersettings)
 {
 	memset(usersettings, 0, sizeof(settings));
-
-	usersettings->mediaunitsize = 0x200;
 }
 
 filepath* settings_get_lzss_path(settings* usersettings)
@@ -96,9 +94,8 @@ unsigned int settings_get_mediaunit_size(settings* usersettings)
 	if (usersettings)
 		return usersettings->mediaunitsize;
 	else
-		return 0x200;
+		return 0;
 }
-
 
 unsigned char* settings_get_ncch_key(settings* usersettings)
 {

@@ -41,9 +41,30 @@ void exheader_set_programid(exheader_context* ctx, u8 programid[8])
 	memcpy(ctx->programid, programid, 8);
 }
 
+void exheader_set_counter(exheader_context* ctx, u8 counter[16])
+{
+	memcpy(ctx->counter, counter, 16);
+}
+
 int exheader_get_compressedflag(exheader_context* ctx)
 {
 	return ctx->compressedflag;
+}
+
+void exheader_set_cryptoflag(exheader_context* ctx, u32 cryptoflag)
+{
+	ctx->cryptoflag = cryptoflag;
+}
+
+int exheader_encrypted(exheader_context* ctx, u32 flags)
+{
+	if (flags & PlainFlag)
+		return 0;
+		
+	if (ctx->cryptoflag & 4)
+		return 0;
+	
+	return 1;
 }
 
 
@@ -53,8 +74,8 @@ int exheader_process(exheader_context* ctx, u32 actions)
 	fread(&ctx->header, 1, sizeof(exheader_header), ctx->file);
 
 
-	ctr_init_ncch(&ctx->aes, settings_get_ncch_key(ctx->usersettings), ctx->partitionid, NCCHTYPE_EXHEADER);
-	if (0 == (actions & PlainFlag))
+	ctr_init_counter(&ctx->aes, settings_get_ncch_key(ctx->usersettings), ctx->counter);
+	if (exheader_encrypted(ctx, actions))
 		ctr_crypt_counter(&ctx->aes, (u8*)&ctx->header, (u8*)&ctx->header, sizeof(exheader_header));
 
 	if (ctx->header.codesetinfo.flags.flag & 1)
@@ -65,7 +86,7 @@ int exheader_process(exheader_context* ctx, u32 actions)
 		if (memcmp(ctx->header.arm11systemlocalcaps.programid, ctx->programid, 8))
 		{
 			fprintf(stderr, "Error, program id mismatch. Wrong key?\n");
-			return 0;
+			//return 0;
 		}
 	}
 

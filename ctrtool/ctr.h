@@ -55,12 +55,7 @@ void		ctr_set_counter( ctr_aes_context* ctx,
 
 void		ctr_init_counter( ctr_aes_context* ctx, 
 						  u8 key[16], 
-						  u8 ctr[12] );
-
-void        ctr_init_ncch( ctr_aes_context* ctx,
-							   u8 key[16],
-							   u8 partitionid[8],
-							   u8 type );
+						  u8 ctr[16] );
 
 
 void		ctr_crypt_counter_block( ctr_aes_context* ctx, 

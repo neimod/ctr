@@ -87,4 +87,6 @@ void ncch_verify_hashes(ncch_context* ctx, u32 flags);
 void ncch_save(ncch_context* ctx, u32 type, u32 flags);
 int ncch_extract_prepare(ncch_context* ctx, u32 type, u32 flags);
 int ncch_extract_buffer(ncch_context* ctx, u8* buffer, u32 buffersize, u32* outsize);
+u32 ncch_get_mediaunit_size(ncch_context* ctx);
+void ncch_get_counter(ncch_context* ctx, u8 counter[16], u8 type);
 #endif // _NCCH_H_

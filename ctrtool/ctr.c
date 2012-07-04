@@ -5,6 +5,7 @@
 
 #include "ctr.h"
 
+
 void ctr_set_iv( ctr_aes_context* ctx,
 				  u8 iv[16] )
 {
@@ -51,26 +52,10 @@ void ctr_set_counter( ctr_aes_context* ctx,
 
 void ctr_init_counter( ctr_aes_context* ctx,
 				       u8 key[16],
-				       u8 ctr[12] )
+				       u8 ctr[16] )
 {
 	aes_setkey_enc(&ctx->aes, key, 128);
 	ctr_set_counter(ctx, ctr);
-}
-
-void ctr_init_ncch( ctr_aes_context* ctx,
-				       u8 key[16],
-				       u8 partitionid[8],
-					   u8 type )
-{
-	u8 counter[16];
-	u32 i;
-
-	memset(counter, 0, 16);
-	for(i=0; i<8; i++)
-		counter[i] = partitionid[7-i];
-	counter[8] = type;
-
-	ctr_init_counter(ctx, key, counter);
 }
 
 

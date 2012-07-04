@@ -47,6 +47,8 @@ void ncsd_process(ncsd_context* ctx, u32 actions)
 	fseek(ctx->file, ctx->offset, SEEK_SET);
 	fread(&ctx->header, 1, 0x200, ctx->file);
 
+
+
 	if (actions & VerifyFlag)
 	{
 		if (ctx->usersettings)
@@ -60,8 +62,17 @@ void ncsd_process(ncsd_context* ctx, u32 actions)
 	ncch_set_offset(&ctx->ncch, 0x4000);
 	ncch_set_size(&ctx->ncch, ctx->size - 0x4000);
 	ncch_set_usersettings(&ctx->ncch, ctx->usersettings);
-
 	ncch_process(&ctx->ncch, actions);
+}
+
+unsigned int ncsd_get_mediaunit_size(ncsd_context* ctx)
+{
+	unsigned int mediaunitsize = settings_get_mediaunit_size(ctx->usersettings);
+
+	if (mediaunitsize == 0)
+		mediaunitsize = 0x200;
+
+	return mediaunitsize;
 }
 
 void ncsd_print(ncsd_context* ctx)
@@ -69,6 +80,8 @@ void ncsd_print(ncsd_context* ctx)
 	char magic[5];
 	ctr_ncsdheader* header = &ctx->header;
 	unsigned int i;
+	unsigned int mediaunitsize = ncsd_get_mediaunit_size(ctx);
+
 
 	memcpy(magic, header->magic, 4);
 	magic[4] = 0;
@@ -87,8 +100,8 @@ void ncsd_print(ncsd_context* ctx)
 	//memdump(stdout, "Partition offset/size:  ", header->partitionoffsetandsize, 0x40);
 	for(i=0; i<8; i++)
 	{
-		u32 partitionoffset = header->partitiongeometry[i].offset * settings_get_mediaunit_size(ctx->usersettings);
-		u32 partitionsize = header->partitiongeometry[i].size * settings_get_mediaunit_size(ctx->usersettings);
+		u32 partitionoffset = header->partitiongeometry[i].offset * mediaunitsize;
+		u32 partitionsize = header->partitiongeometry[i].size * mediaunitsize;
 
 		if (partitionsize != 0)
 		{
