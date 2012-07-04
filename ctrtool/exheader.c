@@ -86,7 +86,7 @@ int exheader_process(exheader_context* ctx, u32 actions)
 		if (memcmp(ctx->header.arm11systemlocalcaps.programid, ctx->programid, 8))
 		{
 			fprintf(stderr, "Error, program id mismatch. Wrong key?\n");
-			//return 0;
+			return 0;
 		}
 	}
 
