@@ -264,7 +264,7 @@ void cia_verify_contents(cia_context *ctx)
 
 		ctr_decrypt_cbc(&ctx->aes, verify_buf, verify_buf, content_size);
 
-		if (ctr_sha_256_verify(verify_buf, content_size, chunk->hash) == HashGood)
+		if (ctr_sha_256_verify(verify_buf, content_size, chunk->hash) == Good)
 			ctx->tmd.content_hash_stat[i] = 1;
 		else
 			ctx->tmd.content_hash_stat[i] = 2;

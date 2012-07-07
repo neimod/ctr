@@ -87,8 +87,16 @@ void		ctr_decrypt_cbc( ctr_aes_context* ctx,
 							  u8* output,
 							  u32 size );
 
+void		ctr_rsa_init_key_pubmodulus( rsakey2048* key, 
+											u8 modulus[0x100] );
+
+void		ctr_rsa_init_key_pub( rsakey2048* key, 
+									u8 modulus[0x100], 
+									u8 exponent[3] );
+
 int			ctr_rsa_init( ctr_rsa_context* ctx, 
 						  rsakey2048* key );
+
 
 void		ctr_rsa_free( ctr_rsa_context* ctx );
 

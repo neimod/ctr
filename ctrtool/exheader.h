@@ -91,10 +91,18 @@ typedef struct
 	exheader_arm11kernelcapabilities arm11kernelcaps;
 	exheader_arm9accesscontrol arm9accesscontrol;
 	// }
+	struct {
+		u8 signature[0x100];
+		u8 ncchpubkeymodulus[0x100];
+		exheader_arm11systemlocalcaps arm11systemlocalcaps;
+		exheader_arm11kernelcapabilities arm11kernelcaps;
+		exheader_arm9accesscontrol arm9accesscontrol;
+	} accessdesc;
 } exheader_header;
 
 typedef struct
 {
+	int haveread;
 	FILE* file;
 	settings* usersettings;
 	u8 partitionid[8];
@@ -104,8 +112,13 @@ typedef struct
 	u32 size;
 	exheader_header header;
 	ctr_aes_context aes;
+	ctr_rsa_context rsa;
 	int compressedflag;
 	int cryptoflag;
+	int validprogramid;
+	int validpriority;
+	int validaffinitymask;
+	int validsignature;
 } exheader_context;
 
 void exheader_init(exheader_context* ctx);
@@ -118,7 +131,9 @@ void exheader_set_programid(exheader_context* ctx, u8 programid[8]);
 void exheader_set_cryptoflag(exheader_context* ctx, u32 cryptoflag);
 void exheader_set_usersettings(exheader_context* ctx, settings* usersettings);
 int exheader_get_compressedflag(exheader_context* ctx);
+void exheader_read(exheader_context* ctx, u32 actions);
 int exheader_process(exheader_context* ctx, u32 actions);
 void exheader_print(exheader_context* ctx);
+void exheader_verify(exheader_context* ctx);
 
 #endif // _EXHEADER_H_

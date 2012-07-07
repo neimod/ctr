@@ -105,7 +105,7 @@ int ncch_extract_prepare(ncch_context* ctx, u32 type, u32 flags)
 		case NCCHTYPE_EXHEADER:
 		{
 			offset = ncch_get_exheader_offset(ctx);
-			size = ncch_get_exheader_size(ctx);
+			size = ncch_get_exheader_size(ctx) * 2;
 		}
 		break;
 	
@@ -214,15 +214,23 @@ clean:
 	return;
 }
 
-void ncch_verify_hashes(ncch_context* ctx, u32 flags)
+void ncch_verify(ncch_context* ctx, u32 flags)
 {
 	u32 mediaunitsize = ncch_get_mediaunit_size(ctx);
 	u32 exefshashregionsize = getle32(ctx->header.exefshashregionsize) * mediaunitsize;
 	u32 romfshashregionsize = getle32(ctx->header.romfshashregionsize) * mediaunitsize;
-	u32 exheaderhashregionsize = getle32(ctx->header.extendedheadersize) * mediaunitsize;
+	u32 exheaderhashregionsize = getle32(ctx->header.extendedheadersize);
 	u8* exefshashregion = malloc(exefshashregionsize);
 	u8* romfshashregion = malloc(romfshashregionsize);
 	u8* exheaderhashregion = malloc(exheaderhashregionsize);
+	rsakey2048 ncchrsakey;
+
+	//if (ctx->usersettings)
+	{
+		//ctx->headersigcheck = ncch_signature_verify(&ctx->header, &ctx->usersettings->keys.ncchrsakey);
+		ctr_rsa_init_key_pubmodulus(&ncchrsakey, ctx->exheader.header.accessdesc.ncchpubkeymodulus);
+		ctx->headersigcheck =  ncch_signature_verify(ctx, &ncchrsakey);
+	}
 
 	if (exefshashregionsize)
 	{
@@ -287,13 +295,10 @@ void ncch_process(ncch_context* ctx, u32 actions)
 	exefs_set_counter(&ctx->exefs, exefscounter);
 	exefs_set_cryptoflag(&ctx->exefs, ctx->header.flags[7]);
 
-	if (actions & VerifyFlag)
-	{
-		if (ctx->usersettings)
-			ctx->headersigcheck = ncch_signature_verify(&ctx->header, &ctx->usersettings->keys.ncchrsakey);
+	exheader_read(&ctx->exheader, actions);
 
-		ncch_verify_hashes(ctx, actions);
-	}
+	if (actions & VerifyFlag)
+		ncch_verify(ctx, actions);
 
 	if (actions & InfoFlag)
 		ncch_print(ctx);		
@@ -313,27 +318,14 @@ void ncch_process(ncch_context* ctx, u32 actions)
 	}
 }
 
-int ncch_signature_verify(const ctr_ncchheader* header, rsakey2048* key)
+int ncch_signature_verify(ncch_context* ctx, rsakey2048* key)
 {
 	u8 hash[0x20];
 
-#if 0
-	u8 output[0x100];
-
-	ctr_rsa_public(header->signature, output, key);
-	memdump(stdout, "RSA decrypted:      ", output, 0x100);
-#endif
-
-	
-
-	ctr_sha_256(header->magic, 0x100, hash);
-
-#if 0
-	ctr_rsa_sign_hash(hash, output, key);
-	memdump(stdout, "RSA signed:    ", output, 0x100);
-#endif
-	return ctr_rsa_verify_hash(header->signature, hash, key);
+	ctr_sha_256(ctx->header.magic, 0x100, hash);
+	return ctr_rsa_verify_hash(ctx->header.signature, hash, key);
 }
+
 
 u32 ncch_get_exefs_offset(ncch_context* ctx)
 {
@@ -401,9 +393,9 @@ void ncch_print(ncch_context* ctx)
 	productcode[0x10] = 0;
 
 	fprintf(stdout, "Header:                 %s\n", magic);
-	if (ctx->headersigcheck == HashUnchecked)
+	if (ctx->headersigcheck == Unchecked)
 		memdump(stdout, "Signature:              ", header->signature, 0x100);
-	else if (ctx->headersigcheck == HashGood)
+	else if (ctx->headersigcheck == Good)
 		memdump(stdout, "Signature (GOOD):       ", header->signature, 0x100);
 	else
 		memdump(stdout, "Signature (FAIL):       ", header->signature, 0x100);
@@ -415,9 +407,9 @@ void ncch_print(ncch_context* ctx)
 	fprintf(stdout, "Temp flag:              %02x\n", header->tempflag);
 	fprintf(stdout, "Product code:           %s\n", productcode);
 	fprintf(stdout, "Exheader size:          %08x\n", getle32(header->extendedheadersize));
-	if (ctx->exheaderhashcheck == HashUnchecked)
+	if (ctx->exheaderhashcheck == Unchecked)
 		memdump(stdout, "Exheader hash:          ", header->extendedheaderhash, 0x20);
-	else if (ctx->exheaderhashcheck == HashGood)
+	else if (ctx->exheaderhashcheck == Good)
 		memdump(stdout, "Exheader hash (GOOD):   ", header->extendedheaderhash, 0x20);
 	else
 		memdump(stdout, "Exheader hash (FAIL):   ", header->extendedheaderhash, 0x20);
@@ -438,15 +430,15 @@ void ncch_print(ncch_context* ctx)
 	fprintf(stdout, "RomFS offset:           0x%08x\n", getle32(header->romfssize)? offset+getle32(header->romfsoffset)*mediaunitsize : 0);
 	fprintf(stdout, "RomFS size:             0x%08x\n", getle32(header->romfssize)*mediaunitsize);
 	fprintf(stdout, "RomFS hash region size: 0x%08x\n", getle32(header->romfshashregionsize)*mediaunitsize);
-	if (ctx->exefshashcheck == HashUnchecked)
+	if (ctx->exefshashcheck == Unchecked)
 		memdump(stdout, "ExeFS Hash:             ", header->exefssuperblockhash, 0x20);
-	else if (ctx->exefshashcheck == HashGood)
+	else if (ctx->exefshashcheck == Good)
 		memdump(stdout, "ExeFS Hash (GOOD):      ", header->exefssuperblockhash, 0x20);
 	else
 		memdump(stdout, "ExeFS Hash (FAIL):      ", header->exefssuperblockhash, 0x20);
-	if (ctx->romfshashcheck == HashUnchecked)
+	if (ctx->romfshashcheck == Unchecked)
 		memdump(stdout, "RomFS Hash:             ", header->romfssuperblockhash, 0x20);
-	else if (ctx->romfshashcheck == HashGood)
+	else if (ctx->romfshashcheck == Good)
 		memdump(stdout, "RomFS Hash (GOOD):      ", header->romfssuperblockhash, 0x20);
 	else
 		memdump(stdout, "RomFS Hash (FAIL):      ", header->romfssuperblockhash, 0x20);

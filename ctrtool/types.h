@@ -20,11 +20,13 @@ enum flags
 	ShowKeysFlag = (1<<6),
 };
 
-enum hashstate
+
+
+enum validstate
 {
-	HashUnchecked = 0,
-	HashGood,
-	HashFail
+	Unchecked = 0,
+	Good = 1,
+	Fail = 2,
 };
 
 #endif

@@ -220,7 +220,7 @@ void exefs_process(exefs_context* ctx, u32 actions)
 	if (actions & VerifyFlag)
 	{	
 		for(i=0; i<8; i++)
-			ctx->hashcheck[i] = exefs_verify(ctx, i, actions)? HashGood : HashFail;
+			ctx->hashcheck[i] = exefs_verify(ctx, i, actions)? Good : Fail;
 	}
 
 	if (actions & InfoFlag)
@@ -314,9 +314,9 @@ void exefs_print(exefs_context* ctx)
 			fprintf(stdout, "Section name:           %s\n", sectname);
 			fprintf(stdout, "Section offset:         0x%08x\n", sectoffset + 0x200);
 			fprintf(stdout, "Section size:           0x%08x\n", sectsize);
-			if (ctx->hashcheck[i] == HashGood)
+			if (ctx->hashcheck[i] == Good)
 				memdump(stdout, "Section hash (GOOD):    ", ctx->header.hashes[7-i], 0x20);
-			else if (ctx->hashcheck[i] == HashFail)
+			else if (ctx->hashcheck[i] == Fail)
 				memdump(stdout, "Section hash (FAIL):    ", ctx->header.hashes[7-i], 0x20);
 			else
 				memdump(stdout, "Section hash:           ", ctx->header.hashes[7-i], 0x20);

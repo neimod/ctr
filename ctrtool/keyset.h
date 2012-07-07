@@ -14,6 +14,13 @@ typedef enum
 	KEY_OK
 } keystatus;
 
+typedef enum
+{
+	RSAKEY_INVALID,
+	RSAKEY_PRIV,
+	RSAKEY_PUB
+} rsakeytype;
+
 typedef struct
 {
 	unsigned char n[256];
@@ -24,7 +31,7 @@ typedef struct
 	unsigned char dp[128];
 	unsigned char dq[128];
 	unsigned char qp[128];
-	int valid;
+	rsakeytype keytype;
 } rsakey2048;
 
 typedef struct
@@ -38,7 +45,7 @@ typedef struct
 	key128 commonkey;
 	key128 ncchctrkey;
 	rsakey2048 ncsdrsakey;
-	rsakey2048 ncchrsakey;
+	rsakey2048 ncchdescrsakey;
 //	rsakey2048 nccholdrsakey;
 //	rsakey2048 ncchdlprsakey;
 //	rsakey2048 dlpoldrsakey;

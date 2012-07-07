@@ -172,9 +172,9 @@ int ctr_sha_256_verify( const u8* data,
 	sha2(data, size, hash, 0);
 
 	if (memcmp(hash, checkhash, 0x20) == 0)
-		return HashGood;
+		return Good;
 	else
-		return HashFail;
+		return Fail;
 }
 
 void ctr_sha_256_init( ctr_sha256_context* ctx )
@@ -197,33 +197,52 @@ void ctr_sha_256_finish( ctr_sha256_context* ctx,
 }
 
 
+void ctr_rsa_init_key_pubmodulus(rsakey2048* key, u8 modulus[0x100])
+{
+	u8 exponent[3] = {0x01, 0x00, 0x01};
+
+	ctr_rsa_init_key_pub(key, modulus, exponent);
+}
+
+void ctr_rsa_init_key_pub(rsakey2048* key, u8 modulus[0x100], u8 exponent[3])
+{
+	key->keytype = RSAKEY_PUB;
+	memcpy(key->n, modulus, 0x100);
+	memcpy(key->e, exponent, 3);
+}
+
 int ctr_rsa_init(ctr_rsa_context* ctx, rsakey2048* key)
 {
 	rsa_init(&ctx->rsa, RSA_PKCS_V15, 0);
 	ctx->rsa.len = 0x100;
 
-	if (!key->valid)
+	if (key->keytype == RSAKEY_INVALID)
 		goto clean;
+
 	if (mpi_read_binary(&ctx->rsa.N, key->n, sizeof(key->n)))
 		goto clean;
 	if (mpi_read_binary(&ctx->rsa.E, key->e, sizeof(key->e)))
 		goto clean;
-	if (mpi_read_binary(&ctx->rsa.D, key->d, sizeof(key->d)))
-		goto clean;
-	if (mpi_read_binary(&ctx->rsa.P, key->p, sizeof(key->p)))
-		goto clean;
-	if (mpi_read_binary(&ctx->rsa.Q, key->q, sizeof(key->q)))
-		goto clean;
-	if (mpi_read_binary(&ctx->rsa.DP, key->dp, sizeof(key->dp)))
-		goto clean;
-	if (mpi_read_binary(&ctx->rsa.DQ, key->dq, sizeof(key->dq)))
-		goto clean;
-	if (mpi_read_binary(&ctx->rsa.QP, key->qp, sizeof(key->qp)))
-		goto clean;
 	if (rsa_check_pubkey(&ctx->rsa))
 		goto clean;
-	if (rsa_check_privkey(&ctx->rsa))
-		goto clean;
+
+	if (key->keytype == RSAKEY_PRIV)
+	{
+		if (mpi_read_binary(&ctx->rsa.D, key->d, sizeof(key->d)))
+			goto clean;
+		if (mpi_read_binary(&ctx->rsa.P, key->p, sizeof(key->p)))
+			goto clean;
+		if (mpi_read_binary(&ctx->rsa.Q, key->q, sizeof(key->q)))
+			goto clean;
+		if (mpi_read_binary(&ctx->rsa.DP, key->dp, sizeof(key->dp)))
+			goto clean;
+		if (mpi_read_binary(&ctx->rsa.DQ, key->dq, sizeof(key->dq)))
+			goto clean;
+		if (mpi_read_binary(&ctx->rsa.QP, key->qp, sizeof(key->qp)))
+			goto clean;
+		if (rsa_check_privkey(&ctx->rsa))
+			goto clean;
+	}
 
 	return 1;
 clean:
@@ -235,6 +254,9 @@ int ctr_rsa_verify_hash(const u8 signature[0x100], const u8 hash[0x20], rsakey20
 	ctr_rsa_context ctx;
 	u32 result;
 
+	if (key->keytype == RSAKEY_INVALID)
+		return Unchecked;
+
 	ctr_rsa_init(&ctx, key);
 
 	result = rsa_pkcs1_verify(&ctx.rsa, RSA_PUBLIC, SIG_RSA_SHA256, 0x20, hash, (u8*)signature);
@@ -242,9 +264,9 @@ int ctr_rsa_verify_hash(const u8 signature[0x100], const u8 hash[0x20], rsakey20
 	ctr_rsa_free(&ctx);
 
 	if (result == 0)
-		return HashGood;
+		return Good;
 	else
-		return HashFail;
+		return Fail;
 }
 
 

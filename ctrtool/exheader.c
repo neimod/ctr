@@ -67,16 +67,25 @@ int exheader_encrypted(exheader_context* ctx, u32 flags)
 	return 1;
 }
 
+void exheader_read(exheader_context* ctx, u32 actions)
+{
+	if (ctx->haveread == 0)
+	{
+		fseek(ctx->file, ctx->offset, SEEK_SET);
+		fread(&ctx->header, 1, sizeof(exheader_header), ctx->file);
+
+
+		ctr_init_counter(&ctx->aes, settings_get_ncch_key(ctx->usersettings), ctx->counter);
+		if (exheader_encrypted(ctx, actions))
+			ctr_crypt_counter(&ctx->aes, (u8*)&ctx->header, (u8*)&ctx->header, sizeof(exheader_header));
+
+		ctx->haveread = 1;
+	}
+}
 
 int exheader_process(exheader_context* ctx, u32 actions)
 {
-	fseek(ctx->file, ctx->offset, SEEK_SET);
-	fread(&ctx->header, 1, sizeof(exheader_header), ctx->file);
-
-
-	ctr_init_counter(&ctx->aes, settings_get_ncch_key(ctx->usersettings), ctx->counter);
-	if (exheader_encrypted(ctx, actions))
-		ctr_crypt_counter(&ctx->aes, (u8*)&ctx->header, (u8*)&ctx->header, sizeof(exheader_header));
+	exheader_read(ctx, actions);
 
 	if (ctx->header.codesetinfo.flags.flag & 1)
 		ctx->compressedflag = 1;
@@ -89,6 +98,9 @@ int exheader_process(exheader_context* ctx, u32 actions)
 			return 0;
 		}
 	}
+
+	if (actions & VerifyFlag)
+		exheader_verify(ctx);
 
 	if (actions & InfoFlag)
 	{
@@ -270,6 +282,53 @@ void exheader_print_arm11kernelcapabilities(exheader_context* ctx)
 	}
 }
 
+int exheader_signature_verify(exheader_context* ctx, rsakey2048* key)
+{
+	u8 hash[0x20];
+
+	ctr_sha_256(ctx->header.accessdesc.arm11systemlocalcaps.programid, 0x100, hash);
+	return ctr_rsa_verify_hash(ctx->header.accessdesc.signature, hash, key);
+}
+
+
+void exheader_verify(exheader_context* ctx)
+{
+	unsigned int i;
+
+
+	ctx->validprogramid = Good;
+	ctx->validpriority = Good;
+	ctx->validaffinitymask = Good;
+
+	for(i=0; i<8; i++)
+	{
+		if (ctx->header.accessdesc.arm11systemlocalcaps.programid[i] == 0xFF)
+			continue;
+		if (ctx->header.accessdesc.arm11systemlocalcaps.programid[i] == ctx->header.arm11systemlocalcaps.programid[i])
+			continue;
+		ctx->validprogramid = Fail;
+		break;
+	}
+
+	if (ctx->header.accessdesc.arm11systemlocalcaps.flags[7] > ctx->header.arm11systemlocalcaps.flags[7])
+		ctx->validpriority = Fail;
+	if (ctx->header.arm11systemlocalcaps.flags[5] & ~ctx->header.accessdesc.arm11systemlocalcaps.flags[5])
+		ctx->validaffinitymask = Fail;
+
+	if (ctx->usersettings)
+		ctx->validsignature = exheader_signature_verify(ctx, &ctx->usersettings->keys.ncchdescrsakey);
+}
+
+const char* exheader_getvalidstring(int valid)
+{
+	if (valid == 0)
+		return "";
+	else if (valid == 1)
+		return "(GOOD)";
+	else
+		return "(FAIL)";
+}
+
 void exheader_print(exheader_context* ctx)
 {
 	u32 i;
@@ -282,6 +341,12 @@ void exheader_print(exheader_context* ctx)
 
 
 	fprintf(stdout, "\nExtended header:\n");
+	if (ctx->validsignature == Unchecked)
+		memdump(stdout, "Signature:              ", ctx->header.accessdesc.signature, 0x100);
+	else if (ctx->validsignature == Good)
+		memdump(stdout, "Signature (GOOD):       ", ctx->header.accessdesc.signature, 0x100);
+	else if (ctx->validsignature == Fail)
+		memdump(stdout, "Signature (FAIL):       ", ctx->header.accessdesc.signature, 0x100);
 	fprintf(stdout, "Name:                   %s\n", name);
 	fprintf(stdout, "Flag:                   %02X ", codesetinfo->flags.flag);
 	if (codesetinfo->flags.flag & 1)
@@ -310,13 +375,13 @@ void exheader_print(exheader_context* ctx)
 	fprintf(stdout, "Savedata size:          0x%08X\n", getle32(ctx->header.systeminfo.savedatasize));
 	fprintf(stdout, "Jump id:                %016llX\n", getle64(ctx->header.systeminfo.jumpid));
 
-	fprintf(stdout, "Program id:             %016llX\n", getle64(ctx->header.arm11systemlocalcaps.programid));
+	fprintf(stdout, "Program id:             %016llX %s\n", getle64(ctx->header.arm11systemlocalcaps.programid), exheader_getvalidstring(ctx->validprogramid));
 	memdump(stdout, "Flags:                  ", ctx->header.arm11systemlocalcaps.flags, 8);
 	fprintf(stdout, "Core version:           0x%X\n", getle32(ctx->header.arm11systemlocalcaps.flags));
 	fprintf(stdout, "System mode:            0x%X\n", (ctx->header.arm11systemlocalcaps.flags[6]>>4)&0xF);
 	fprintf(stdout, "Ideal processor:        %d\n", (ctx->header.arm11systemlocalcaps.flags[6]>>0)&0x3);
-	fprintf(stdout, "Affinity mask:          %d\n", (ctx->header.arm11systemlocalcaps.flags[6]>>2)&0x3);
-	fprintf(stdout, "Main thread priority:   %d\n", ctx->header.arm11systemlocalcaps.flags[7]);
+	fprintf(stdout, "Affinity mask:          %d %s\n", (ctx->header.arm11systemlocalcaps.flags[6]>>2)&0x3, exheader_getvalidstring(ctx->validaffinitymask));
+	fprintf(stdout, "Main thread priority:   %d %s\n", ctx->header.arm11systemlocalcaps.flags[7], exheader_getvalidstring(ctx->validpriority));
 	// print resource limit descriptor too? currently mostly zeroes...
 	fprintf(stdout, "Ext savedata id:        %016llX\n", getle64(ctx->header.arm11systemlocalcaps.storageinfo.extsavedataid));
 	fprintf(stdout, "System savedata id:     %016llX\n", getle64(ctx->header.arm11systemlocalcaps.storageinfo.systemsavedataid));
@@ -337,5 +402,5 @@ void exheader_print(exheader_context* ctx)
 			fprintf(stdout, "Service access:         %s\n", service);
 		}
 	}
-	fprintf(stdout, "Reslimit category       %02X\n", ctx->header.arm11systemlocalcaps.resourcelimitcategory);
+	fprintf(stdout, "Reslimit category:      %02X\n", ctx->header.arm11systemlocalcaps.resourcelimitcategory);
 }

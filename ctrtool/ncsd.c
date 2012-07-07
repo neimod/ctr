@@ -70,7 +70,7 @@ unsigned int ncsd_get_mediaunit_size(ncsd_context* ctx)
 	unsigned int mediaunitsize = settings_get_mediaunit_size(ctx->usersettings);
 
 	if (mediaunitsize == 0)
-		mediaunitsize = 0x200;
+		mediaunitsize = 1<<(9+ctx->header.flags[6]);
 
 	return mediaunitsize;
 }
@@ -87,9 +87,9 @@ void ncsd_print(ncsd_context* ctx)
 	magic[4] = 0;
 
 	fprintf(stdout, "Header:                 %s\n", magic);
-	if (ctx->headersigcheck == HashUnchecked)
+	if (ctx->headersigcheck == Unchecked)
 		memdump(stdout, "Signature:              ", header->signature, 0x100);
-	else if (ctx->headersigcheck == HashGood)
+	else if (ctx->headersigcheck == Good)
 		memdump(stdout, "Signature (GOOD):       ", header->signature, 0x100);
 	else
 		memdump(stdout, "Signature (FAIL):       ", header->signature, 0x100);       
@@ -112,5 +112,6 @@ void ncsd_print(ncsd_context* ctx)
 	memdump(stdout, "Additional header size: ", header->additionalheadersize, 4);
 	memdump(stdout, "Sector zero offset:     ", header->sectorzerooffset, 4);
 	memdump(stdout, "Flags:                  ", header->flags, 8);
+	fprintf(stdout, " > Mediaunit size:      0x%X\n", mediaunitsize);
 	memdump(stdout, "Partition id:           ", header->partitionid, 0x40);
 }
