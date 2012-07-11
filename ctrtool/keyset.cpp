@@ -113,11 +113,14 @@ int keyset_load_key128(TiXmlHandle node, key128* key)
 
 int keyset_load_rsakey2048(TiXmlHandle node, rsakey2048* key)
 {
-	key->valid = 0;
+	key->keytype = RSAKEY_INVALID;
+
 	if (!keyset_load_key(node.FirstChild("N"), key->n, sizeof(key->n), 0))
 		goto clean;
 	if (!keyset_load_key(node.FirstChild("E"), key->e, sizeof(key->e), 0))
 		goto clean;
+	key->keytype = RSAKEY_PUB;
+
 	if (!keyset_load_key(node.FirstChild("D"), key->d, sizeof(key->d), 0))
 		goto clean;
 	if (!keyset_load_key(node.FirstChild("P"), key->p, sizeof(key->p), 0))
@@ -131,10 +134,9 @@ int keyset_load_rsakey2048(TiXmlHandle node, rsakey2048* key)
 	if (!keyset_load_key(node.FirstChild("QP"), key->qp, sizeof(key->qp), 0))
 		goto clean;
 
-	key->valid = 1;
-	return 1;
+	key->keytype = RSAKEY_PRIV;
 clean:
-	return 0;
+	return (key->keytype != RSAKEY_INVALID);
 }
 
 int keyset_load(keyset* keys, const char* fname, int verbose)
@@ -153,7 +155,7 @@ int keyset_load(keyset* keys, const char* fname, int verbose)
 	TiXmlHandle root = doc.FirstChild("document");
 
 	keyset_load_rsakey2048(root.FirstChild("ncsdrsakey"), &keys->ncsdrsakey);
-	keyset_load_rsakey2048(root.FirstChild("ncchrsakey"), &keys->ncchrsakey);
+	keyset_load_rsakey2048(root.FirstChild("ncchdescrsakey"), &keys->ncchdescrsakey);
 //	keyset_load_rsakey2048(root.FirstChild("nccholdrsakey"), &keys->nccholdrsakey);
 //	keyset_load_rsakey2048(root.FirstChild("ncchdlprsakey"), &keys->ncchdlprsakey);
 //	keyset_load_rsakey2048(root.FirstChild("dlpoldrsakey"), &keys->dlpoldrsakey);
