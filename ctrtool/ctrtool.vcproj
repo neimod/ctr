@@ -195,6 +195,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\firm.c"
+				>
+			</File>
+			<File
 				RelativePath=".\windows\getopt.c"
 				>
 			</File>
@@ -302,6 +306,10 @@
 			</File>
 			<File
 				RelativePath=".\filepath.h"
+				>
+			</File>
+			<File
+				RelativePath=".\firm.h"
 				>
 			</File>
 			<File

@@ -11,6 +11,8 @@ typedef struct
 } filepath;
 
 void filepath_init(filepath* fpath);
+void filepath_copy(filepath* fpath, filepath* copy);
+void filepath_append(filepath* fpath, const char* format, ...);
 void filepath_set(filepath* fpath, const char* path);
 const char* filepath_get(filepath* fpath);
 

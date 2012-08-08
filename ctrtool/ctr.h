@@ -9,6 +9,7 @@
 
 #define MAGIC_NCCH 0x4843434E
 #define MAGIC_NCSD 0x4453434E
+#define MAGIC_FIRM 0x4D524946
 
 typedef enum
 {
@@ -18,7 +19,8 @@ typedef enum
 	FILETYPE_CIA,
 	FILETYPE_EXHEADER,
 	FILETYPE_TMD,
-	FILETYPE_LZSS
+	FILETYPE_LZSS,
+	FILETYPE_FIRM
 } ctr_filetypes;
 
 typedef struct

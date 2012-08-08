@@ -49,6 +49,15 @@ filepath* settings_get_exefs_dir_path(settings* usersettings)
 		return 0;
 }
 
+filepath* settings_get_firm_dir_path(settings* usersettings)
+{
+	if (usersettings)
+		return &usersettings->firmdirpath;
+	else
+		return 0;
+}
+
+
 filepath* settings_get_certs_path(settings* usersettings)
 {
 	if (usersettings)
@@ -144,6 +153,12 @@ void settings_set_romfs_path(settings* usersettings, const char* path)
 {
 	filepath_set(&usersettings->romfspath, path);
 }
+
+void settings_set_firm_dir_path(settings* usersettings, const char* path)
+{
+	filepath_set(&usersettings->firmdirpath, path);
+}
+
 
 void settings_set_exheader_path(settings* usersettings, const char* path)
 {

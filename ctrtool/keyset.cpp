@@ -156,6 +156,7 @@ int keyset_load(keyset* keys, const char* fname, int verbose)
 
 	keyset_load_rsakey2048(root.FirstChild("ncsdrsakey"), &keys->ncsdrsakey);
 	keyset_load_rsakey2048(root.FirstChild("ncchdescrsakey"), &keys->ncchdescrsakey);
+	keyset_load_rsakey2048(root.FirstChild("firmrsakey"), &keys->firmrsakey);
 //	keyset_load_rsakey2048(root.FirstChild("nccholdrsakey"), &keys->nccholdrsakey);
 //	keyset_load_rsakey2048(root.FirstChild("ncchdlprsakey"), &keys->ncchdlprsakey);
 //	keyset_load_rsakey2048(root.FirstChild("dlpoldrsakey"), &keys->dlpoldrsakey);

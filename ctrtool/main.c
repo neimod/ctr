@@ -14,6 +14,7 @@
 #include "exefs.h"
 #include "info.h"
 #include "settings.h"
+#include "firm.h"
 
 enum cryptotype
 {
@@ -67,6 +68,8 @@ static void usage(const char *argv0)
 		   "  --tmd=file         Specify TMD file path.\n"
 		   "  --contents=file    Specify Contents file path.\n"
 		   "  --meta=file        Specify Meta file path.\n"
+		   "FIRM options:\n"
+		   "  --firmdir=dir      Specify Firm directory path.\n"
            "\n",
 		   argv0);
    exit(1);
@@ -121,6 +124,7 @@ int main(int argc, char* argv[])
 			{"ncchctrkey", 1, NULL, 12},
 			{"intype", 1, NULL, 't'},
 			{"lzssout", 1, NULL, 13},
+			{"firmdir", 1, NULL, 14},
 			{NULL},
 		};
 
@@ -192,6 +196,7 @@ int main(int argc, char* argv[])
 			case 11: keyset_parse_commonkey(&tmpkeys, optarg, strlen(optarg)); break;
 			case 12: keyset_parse_ncchctrkey(&tmpkeys, optarg, strlen(optarg)); break;
 			case 13: settings_set_lzss_path(&ctx.usersettings, optarg); break;
+			case 14: settings_set_firm_dir_path(&ctx.usersettings, optarg); break;
 
 
 			default:
@@ -246,10 +251,23 @@ int main(int argc, char* argv[])
 			break;
 
 			default:
-				fseek(ctx.infile, 0, SEEK_SET);
-				fread(magic, 1, 4, ctx.infile);
-				if (getle32(magic) == 0x2020)
-					ctx.filetype = FILETYPE_CIA;
+			break;
+		}
+	}
+
+	if (ctx.filetype == FILETYPE_UNKNOWN)
+	{
+		fseek(ctx.infile, 0, SEEK_SET);
+		fread(magic, 1, 4, ctx.infile);
+		
+		switch(getle32(magic))
+		{
+			case 0x2020:
+				ctx.filetype = FILETYPE_CIA;
+			break;
+
+			case MAGIC_FIRM:
+				ctx.filetype = FILETYPE_FIRM;
 			break;
 		}
 	}
@@ -259,14 +277,7 @@ int main(int argc, char* argv[])
 		fprintf(stdout, "Unknown file\n");
 		exit(1);
 	}
-	
-//	if (ncchoffset == ~0)
-//	{
-//		if (ctx.filetype == FILETYPE_CCI)
-//			ncch_set_offset(&ctx.ncch, 0x4000);
-//		else if (ctx.filetype == FILETYPE_CXI)
-//			ncch_set_offset(&ctx.ncch, 0);
-//	}
+
 
 	switch(ctx.filetype)
 	{
@@ -279,6 +290,19 @@ int main(int argc, char* argv[])
 			ncsd_set_size(&ncsdctx, ctx.infilesize);
 			ncsd_set_usersettings(&ncsdctx, &ctx.usersettings);
 			ncsd_process(&ncsdctx, ctx.actions);
+			
+			break;			
+		}
+
+		case FILETYPE_FIRM:
+		{
+			firm_context firmctx;
+
+			firm_init(&firmctx);
+			firm_set_file(&firmctx, ctx.infile);
+			firm_set_size(&firmctx, ctx.infilesize);
+			firm_set_usersettings(&firmctx, &ctx.usersettings);
+			firm_process(&firmctx, ctx.actions);
 			
 			break;			
 		}
