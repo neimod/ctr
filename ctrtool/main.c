@@ -53,7 +53,7 @@ static void usage(const char *argv0)
 		   "  --commonkey=key    Set common key.\n"
 		   "  --ncchctrkey=key   Set ncchctr key.\n"
 		   "  --showkeys         Show the keys being used.\n"
-		   "  -t, --intype=type	 Specify input file type [ncsd, ncch, exheader, cia, tmd]\n"
+		   "  -t, --intype=type	 Specify input file type [ncsd, ncch, exheader, cia, tmd, lzss, firm]\n"
 		   "LZSS options:\n"
 		   "  --lzssout=file	 Specify lzss output file\n"
 		   "CXI/CCI options:\n"
@@ -180,6 +180,8 @@ int main(int argc, char* argv[])
 					ctx.filetype = FILETYPE_TMD;
 				else if (!strcmp(optarg, "lzss"))
 					ctx.filetype = FILETYPE_LZSS;
+				else if (!strcmp(optarg, "firm"))
+					ctx.filetype = FILETYPE_FIRM;
 			break;
 
 			case 0: settings_set_exefs_path(&ctx.usersettings, optarg); break;
