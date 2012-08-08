@@ -255,7 +255,7 @@ int ctr_rsa_verify_hash(const u8 signature[0x100], const u8 hash[0x20], rsakey20
 	u32 result;
 
 	if (key->keytype == RSAKEY_INVALID)
-		return Unchecked;
+		return Fail;
 
 	ctr_rsa_init(&ctx, key);
 

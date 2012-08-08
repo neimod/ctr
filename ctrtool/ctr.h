@@ -18,7 +18,7 @@ typedef enum
 	FILETYPE_CIA,
 	FILETYPE_EXHEADER,
 	FILETYPE_TMD,
-	FILETYPE_LZSS,
+	FILETYPE_LZSS
 } ctr_filetypes;
 
 typedef struct

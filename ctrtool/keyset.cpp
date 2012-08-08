@@ -46,7 +46,7 @@ int keyset_load_key(TiXmlHandle node, unsigned char* key, unsigned int size, int
 		*valid = 0;
 
 	if (!elem)
-		return KEY_ERR_INVALID_NODE;
+		return 0;
 
 	const char* text = elem->GetText();
 	unsigned int textlen = strlen(text);
@@ -56,10 +56,10 @@ int keyset_load_key(TiXmlHandle node, unsigned char* key, unsigned int size, int
 	if (status == KEY_ERR_LEN_MISMATCH)
 	{
 		fprintf(stderr, "Error size mismatch for key \"%s/%s\"\n", elem->Parent()->Value(), elem->Value());
-		return status;
+		return 0;
 	}
 	
-	return status;
+	return 1;
 }
 
 
@@ -207,11 +207,44 @@ void keyset_parse_ncchctrkey(keyset* keys, char* keytext, int keylen)
 	keyset_parse_key128(&keys->ncchctrkey, keytext, keylen);
 }
 
+void keyset_dump_rsakey(rsakey2048* key, const char* keytitle)
+{
+	if (key->keytype == RSAKEY_INVALID)
+		return;
+
+
+	fprintf(stdout, "%s\n", keytitle);
+
+	memdump(stdout, "Modulus: ", key->n, 256);
+	memdump(stdout, "Exponent: ", key->e, 3);
+
+	if (key->keytype == RSAKEY_PRIV)
+	{
+		memdump(stdout, "P: ", key->p, 128);
+		memdump(stdout, "Q: ", key->q, 128);
+	}
+	fprintf(stdout, "\n");
+}
+
+void keyset_dump_key128(key128* key, const char* keytitle)
+{
+	if (key->valid)
+	{
+		fprintf(stdout, "%s\n", keytitle);
+		memdump(stdout, "", key->data, 16);
+		fprintf(stdout, "\n");
+	}
+}
 
 void keyset_dump(keyset* keys)
 {
 	fprintf(stdout, "Current keyset:          \n");
-	memdump(stdout, keys->ncchctrkey.valid? "(default) ncchctr key:  ":"(loaded) ncchctr key:  ", keys->ncchctrkey.data, 16);
-	memdump(stdout, keys->commonkey.valid?  "(default) common key:   ":"(loaded) common key:   ", keys->commonkey.data, 16);
+	keyset_dump_key128(&keys->ncchctrkey, "NCCH CTR KEY");
+	keyset_dump_key128(&keys->commonkey, "COMMON KEY");
+
+	keyset_dump_rsakey(&keys->ncsdrsakey, "NCSD RSA KEY");
+	keyset_dump_rsakey(&keys->ncchdescrsakey, "NCCH DESC RSA KEY");
+
 	fprintf(stdout, "\n");
 }
+

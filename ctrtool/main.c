@@ -82,6 +82,7 @@ int main(int argc, char* argv[])
 	u32 ncchoffset = ~0;
 	char keysetfname[512] = "keys.xml";
 	keyset tmpkeys;
+	unsigned int checkkeysetfile = 0;
 	
 	memset(&ctx, 0, sizeof(toolcontext));
 	ctx.actions = InfoFlag | ExtractFlag;
@@ -159,6 +160,7 @@ int main(int argc, char* argv[])
 
 			case 'k':
 				strncpy(keysetfname, optarg, sizeof(keysetfname));
+				checkkeysetfile = 1;
 			break;
 
 			case 't':
@@ -208,7 +210,7 @@ int main(int argc, char* argv[])
 		usage(argv[0]);
 	}
 
-	keyset_load(&ctx.usersettings.keys, keysetfname, ctx.actions & VerboseFlag);
+	keyset_load(&ctx.usersettings.keys, keysetfname, (ctx.actions & VerboseFlag) | checkkeysetfile);
 	keyset_merge(&ctx.usersettings.keys, &tmpkeys);
 	if (ctx.actions & ShowKeysFlag)
 		keyset_dump(&ctx.usersettings.keys);
@@ -217,7 +219,7 @@ int main(int argc, char* argv[])
 
 	if (ctx.infile == 0) 
 	{
-		fprintf(stderr, "error: could not open input file! ('%s')\n", infname);
+		fprintf(stderr, "error: could not open input file!\n");
 		return -1;
 	}
 
