@@ -220,10 +220,18 @@ void ncch_verify(ncch_context* ctx, u32 flags)
 	u32 exefshashregionsize = getle32(ctx->header.exefshashregionsize) * mediaunitsize;
 	u32 romfshashregionsize = getle32(ctx->header.romfshashregionsize) * mediaunitsize;
 	u32 exheaderhashregionsize = getle32(ctx->header.extendedheadersize);
-	u8* exefshashregion = malloc(exefshashregionsize);
-	u8* romfshashregion = malloc(romfshashregionsize);
-	u8* exheaderhashregion = malloc(exheaderhashregionsize);
+	u8* exefshashregion = 0;
+	u8* romfshashregion = 0;
+	u8* exheaderhashregion = 0;
 	rsakey2048 ncchrsakey;
+
+	if (exefshashregionsize >= SIZE_128MB || romfshashregionsize >= SIZE_128MB || exheaderhashregionsize >= SIZE_128MB)
+		goto clean;
+
+	exefshashregion = malloc(exefshashregionsize);
+	romfshashregion = malloc(romfshashregionsize);
+	exheaderhashregion = malloc(exheaderhashregionsize);
+
 
 	//if (ctx->usersettings)
 	{
@@ -274,6 +282,12 @@ void ncch_process(ncch_context* ctx, u32 actions)
 	fseek(ctx->file, ctx->offset, SEEK_SET);
 	fread(&ctx->header, 1, 0x200, ctx->file);
 
+	if (getle32(ctx->header.magic) != MAGIC_NCCH)
+	{
+		fprintf(stdout, "Error, NCCH segment corrupted\n");
+		return;
+	}
+
 	ncch_get_counter(ctx, exheadercounter, NCCHTYPE_EXHEADER);
 	ncch_get_counter(ctx, exefscounter, NCCHTYPE_EXEFS);
 
@@ -296,6 +310,9 @@ void ncch_process(ncch_context* ctx, u32 actions)
 	exefs_set_cryptoflag(&ctx->exefs, ctx->header.flags[7]);
 
 	exheader_read(&ctx->exheader, actions);
+
+	if (!exheader_programid_valid(&ctx->exheader))
+		return;
 
 	if (actions & VerifyFlag)
 		ncch_verify(ctx, actions);

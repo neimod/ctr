@@ -103,6 +103,13 @@ void firm_process(firm_context* ctx, u32 actions)
 	fseek(ctx->file, ctx->offset, SEEK_SET);
 	fread(&ctx->header, 1, sizeof(firm_header), ctx->file);
 
+	if (getle32(ctx->header.magic) != MAGIC_FIRM)
+	{
+		fprintf(stdout, "Error, FIRM segment corrupted\n");
+		return;
+	}
+
+
 	if (actions & VerifyFlag)
 	{
 		firm_verify(ctx, actions);

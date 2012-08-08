@@ -83,13 +83,8 @@ void exheader_read(exheader_context* ctx, u32 actions)
 	}
 }
 
-int exheader_process(exheader_context* ctx, u32 actions)
+int exheader_programid_valid(exheader_context* ctx)
 {
-	exheader_read(ctx, actions);
-
-	if (ctx->header.codesetinfo.flags.flag & 1)
-		ctx->compressedflag = 1;
-
 	if (!settings_get_ignore_programid(ctx->usersettings))
 	{
 		if (memcmp(ctx->header.arm11systemlocalcaps.programid, ctx->programid, 8))
@@ -98,6 +93,16 @@ int exheader_process(exheader_context* ctx, u32 actions)
 			return 0;
 		}
 	}
+
+	return 1;
+}
+
+int exheader_process(exheader_context* ctx, u32 actions)
+{
+	exheader_read(ctx, actions);
+
+	if (ctx->header.codesetinfo.flags.flag & 1)
+		ctx->compressedflag = 1;
 
 	if (actions & VerifyFlag)
 		exheader_verify(ctx);

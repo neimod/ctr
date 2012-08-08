@@ -11,6 +11,8 @@
 #define MAGIC_NCSD 0x4453434E
 #define MAGIC_FIRM 0x4D524946
 
+#define SIZE_128MB (128 * 1024 * 1024)
+
 typedef enum
 {
 	FILETYPE_UNKNOWN = 0,

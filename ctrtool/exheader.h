@@ -135,5 +135,6 @@ void exheader_read(exheader_context* ctx, u32 actions);
 int exheader_process(exheader_context* ctx, u32 actions);
 void exheader_print(exheader_context* ctx);
 void exheader_verify(exheader_context* ctx);
+int exheader_programid_valid(exheader_context* ctx);
 
 #endif // _EXHEADER_H_

@@ -47,6 +47,11 @@ void ncsd_process(ncsd_context* ctx, u32 actions)
 	fseek(ctx->file, ctx->offset, SEEK_SET);
 	fread(&ctx->header, 1, 0x200, ctx->file);
 
+	if (getle32(ctx->header.magic) != MAGIC_NCSD)
+	{
+		fprintf(stdout, "Error, NCSD segment corrupted\n");
+		return;
+	}
 
 
 	if (actions & VerifyFlag)
@@ -98,6 +103,7 @@ void ncsd_print(ncsd_context* ctx)
 	//memdump(stdout, "Partition FS type:      ", header->partitionfstype, 8);
 	//memdump(stdout, "Partition crypt type:   ", header->partitioncrypttype, 8);
 	//memdump(stdout, "Partition offset/size:  ", header->partitionoffsetandsize, 0x40);
+	fprintf(stdout, "\n");
 	for(i=0; i<8; i++)
 	{
 		u32 partitionoffset = header->partitiongeometry[i].offset * mediaunitsize;
@@ -105,7 +111,12 @@ void ncsd_print(ncsd_context* ctx)
 
 		if (partitionsize != 0)
 		{
-			fprintf(stdout, "Partition %d:            0x%08X-0x%08X [AREA] / %02X [FS] / %02X [CRYPTO]\n", i, partitionoffset, partitionoffset+partitionsize, header->partitionfstype[i], header->partitioncrypttype[i]);
+			fprintf(stdout, "Partition %d            \n", i);
+			memdump(stdout, " Id:                    ", header->partitionid+i*8, 8);
+			fprintf(stdout, " Area:                  0x%08X-0x%08X\n", partitionoffset, partitionoffset+partitionsize);
+			fprintf(stdout, " Filesystem:            %02X\n", header->partitionfstype[i]);
+			fprintf(stdout, " Encryption:            %02X\n", header->partitioncrypttype[i]);
+			fprintf(stdout, "\n");
 		}
 	}
 	memdump(stdout, "Extended header hash:   ", header->extendedheaderhash, 0x20);
@@ -113,5 +124,5 @@ void ncsd_print(ncsd_context* ctx)
 	memdump(stdout, "Sector zero offset:     ", header->sectorzerooffset, 4);
 	memdump(stdout, "Flags:                  ", header->flags, 8);
 	fprintf(stdout, " > Mediaunit size:      0x%X\n", mediaunitsize);
-	memdump(stdout, "Partition id:           ", header->partitionid, 0x40);
+
 }
