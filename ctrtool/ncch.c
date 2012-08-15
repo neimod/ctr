@@ -311,8 +311,6 @@ void ncch_process(ncch_context* ctx, u32 actions)
 
 	exheader_read(&ctx->exheader, actions);
 
-	if (!exheader_programid_valid(&ctx->exheader))
-		return;
 
 	if (actions & VerifyFlag)
 		ncch_verify(ctx, actions);
@@ -327,6 +325,8 @@ void ncch_process(ncch_context* ctx, u32 actions)
 		ncch_save(ctx, NCCHTYPE_EXHEADER, actions);
 	}
 
+	if (!exheader_programid_valid(&ctx->exheader))
+		return;
 
 	if (exheader_process(&ctx->exheader, actions))
 	{

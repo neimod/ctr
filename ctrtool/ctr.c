@@ -259,10 +259,10 @@ int ctr_rsa_verify_hash(const u8 signature[0x100], const u8 hash[0x20], rsakey20
 		return Fail;
 
 	ctr_rsa_init(&ctx, key);
-
-	//result = ctr_rsa_public(signature, output, key);
-	//printf("Result = %d\n", result);
-	//memdump(stdout, "output: ", output, 0x100);
+// 	memset(output, 0, 0x100);
+//	result = ctr_rsa_public(signature, output, key);
+//	printf("Result = %d\n", result);
+//	memdump(stdout, "output: ", output, 0x100);
 
 	result = rsa_pkcs1_verify(&ctx.rsa, RSA_PUBLIC, SIG_RSA_SHA256, 0x20, hash, (u8*)signature);
 
