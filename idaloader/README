@@ -1,0 +1,23 @@
+ctr_ldr.py -- a FIRM/NCCH Loader for IDA
+===
+___
+
+You will need a recent-ish IDA with IDAPython and construct (http://construct.wikispaces.com)
+
+To install construct you probably want to grab setuptools (http://pypi.python.org/pypi/setuptools/)
+
+Just follow this easy 8-step walkthrough:
+
+* run setuptools installer (if you dont have setuptools already)
+* extract construct tarball, run python setup.py install
+* copy ctr_ldr.py to ida/loaders
+* dump firmware from 3ds
+* decrypt it
+* load 'er up in IDA
+* ????
+* PROFIT!!
+
+Enjoy kids!
+
+-- blasty
+
