@@ -291,7 +291,7 @@ int exheader_signature_verify(exheader_context* ctx, rsakey2048* key)
 {
 	u8 hash[0x20];
 
-	ctr_sha_256(ctx->header.accessdesc.arm11systemlocalcaps.programid, 0x100, hash);
+	ctr_sha_256(ctx->header.accessdesc.ncchpubkeymodulus, 0x300, hash);
 	return ctr_rsa_verify_hash(ctx->header.accessdesc.signature, hash, key);
 }
 

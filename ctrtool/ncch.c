@@ -233,11 +233,15 @@ void ncch_verify(ncch_context* ctx, u32 flags)
 	exheaderhashregion = malloc(exheaderhashregionsize);
 
 
-	//if (ctx->usersettings)
+	if (ctx->usersettings)
 	{
-		//ctx->headersigcheck = ncch_signature_verify(&ctx->header, &ctx->usersettings->keys.ncchrsakey);
-		ctr_rsa_init_key_pubmodulus(&ncchrsakey, ctx->exheader.header.accessdesc.ncchpubkeymodulus);
-		ctx->headersigcheck =  ncch_signature_verify(ctx, &ncchrsakey);
+		if ( (ctx->header.flags[5] & 3) == 1)
+			ctx->headersigcheck = ncch_signature_verify(ctx, &ctx->usersettings->keys.ncchrsakey);
+		else 
+		{
+			ctr_rsa_init_key_pubmodulus(&ncchrsakey, ctx->exheader.header.accessdesc.ncchpubkeymodulus);
+			ctx->headersigcheck =  ncch_signature_verify(ctx, &ncchrsakey);
+		}
 	}
 
 	if (exefshashregionsize)
@@ -394,6 +398,37 @@ u32 ncch_get_mediaunit_size(ncch_context* ctx)
 	return mediaunitsize;
 }
 
+static const char* formtypetostring(unsigned char flags)
+{
+	unsigned char formtype = flags & 3;
+
+	switch(formtype)
+	{
+	case 0: return "Not assigned";
+	case 1: return "Simple content";
+	case 2: return "Executable content without RomFS";
+	case 3: return "Executable content";
+	default: return "Unknown";
+	}
+}
+
+static const char* contenttypetostring(unsigned char flags)
+{
+	unsigned char contenttype = flags>>2;
+
+	switch(contenttype)
+	{
+	case 0: return "Application";
+	case 1: return "System Update";
+	case 2: return "Manual";
+	case 3: return "Child";
+	case 4: return "Trial";
+	default: return "Unknown";
+	}
+}
+
+
+
 void ncch_print(ncch_context* ctx)
 {
 	char magic[5];
@@ -435,9 +470,16 @@ void ncch_print(ncch_context* ctx)
 	if (header->flags[7] & 4)
 		fprintf(stdout, " > Crypto key:          None\n");
 	else if (header->flags[7] & 1)
-		fprintf(stdout, " > Crypto key:          Zeros\n");
+		fprintf(stdout, " > Crypto key:          Zeros/Fixed\n");
 	else
 		fprintf(stdout, " > Crypto key:          Secure\n");
+	fprintf(stdout, " > Form type:           %s\n", formtypetostring(header->flags[5]));
+	fprintf(stdout, " > Content type:        %s\n", contenttypetostring(header->flags[5]));
+	if (header->flags[4] & 1)
+		fprintf(stdout, " > Content platform:    CTR\n");
+	if (header->flags[7] & 2)
+		fprintf(stdout, " > No RomFS mount\n");
+
 
 	fprintf(stdout, "Plain region offset:    0x%08x\n", getle32(header->plainregionsize)? offset+getle32(header->plainregionoffset)*mediaunitsize : 0);
 	fprintf(stdout, "Plain region size:      0x%08x\n", getle32(header->plainregionsize)*mediaunitsize);
