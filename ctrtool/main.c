@@ -51,7 +51,8 @@ static void usage(const char *argv0)
 		   "  -y, --verify       Verify hashes and signatures.\n"
 		   "  --unitsize=size    Set media unit size (default 0x200).\n"
 		   "  --commonkey=key    Set common key.\n"
-		   "  --ncchctrkey=key   Set ncchctr key.\n"
+		   "  --ncchkey=key      Set ncch key.\n"
+		   "  --ncchsyskey=key   Set ncch fixed system key.\n"
 		   "  --showkeys         Show the keys being used.\n"
 		   "  -t, --intype=type	 Specify input file type [ncsd, ncch, exheader, cia, tmd, lzss, firm]\n"
 		   "LZSS options:\n"
@@ -121,10 +122,11 @@ int main(int argc, char* argv[])
 			{"unitsize", 1, NULL, 9},
 			{"showkeys", 0, NULL, 10},
 			{"commonkey", 1, NULL, 11},
-			{"ncchctrkey", 1, NULL, 12},
+			{"ncchkey", 1, NULL, 12},
 			{"intype", 1, NULL, 't'},
 			{"lzssout", 1, NULL, 13},
 			{"firmdir", 1, NULL, 14},
+			{"ncchsyskey", 1, NULL, 15},
 			{NULL},
 		};
 
@@ -196,9 +198,10 @@ int main(int argc, char* argv[])
 			case 9: settings_set_mediaunit_size(&ctx.usersettings, strtoul(optarg, 0, 0)); break;
 			case 10: ctx.actions |= ShowKeysFlag; break;
 			case 11: keyset_parse_commonkey(&tmpkeys, optarg, strlen(optarg)); break;
-			case 12: keyset_parse_ncchctrkey(&tmpkeys, optarg, strlen(optarg)); break;
+			case 12: keyset_parse_ncchkey(&tmpkeys, optarg, strlen(optarg)); break;
 			case 13: settings_set_lzss_path(&ctx.usersettings, optarg); break;
 			case 14: settings_set_firm_dir_path(&ctx.usersettings, optarg); break;
+			case 15: keyset_parse_ncchfixedsystemkey(&tmpkeys, optarg, strlen(optarg)); break;
 
 
 			default:

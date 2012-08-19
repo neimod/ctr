@@ -50,16 +50,20 @@ void tik_get_iv(tik_context* ctx, u8 iv[16])
 void tik_decrypt_titlekey(tik_context* ctx, u8 decryptedkey[0x10]) 
 {
 	u8 iv[16];
-	
+	u8* key = settings_get_common_key(ctx->usersettings);
 
 	memset(decryptedkey, 0, 0x10);
 
-	if (settings_is_common_key_valid(ctx->usersettings))
+	if (!key)
+	{
+		fprintf(stdout, "Warning, could not read common key.\n");
+	}
+	else
 	{
 		memset(iv, 0, 0x10);
 		memcpy(iv, ctx->tik.title_id, 8);
 
-		ctr_init_cbc_decrypt(&ctx->aes, settings_get_common_key(ctx->usersettings), iv);
+		ctr_init_cbc_decrypt(&ctx->aes, key, iv);
 		ctr_decrypt_cbc(&ctx->aes, ctx->tik.encrypted_title_key, decryptedkey, 0x10);
 	}
 }
@@ -104,7 +108,7 @@ void tik_print(tik_context* ctx)
 
 	memdump(stdout, "Encrypted Titlekey:     ", tik->encrypted_title_key, 0x10);
 	
-	if (settings_is_common_key_valid(ctx->usersettings))
+	if (settings_get_common_key(ctx->usersettings))
 		memdump(stdout, "Decrypted Titlekey:     ", ctx->titlekey, 0x10);
 
 	memdump(stdout,	"Ticket ID:              ", tik->ticket_id, 0x08);

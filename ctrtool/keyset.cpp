@@ -159,7 +159,8 @@ int keyset_load(keyset* keys, const char* fname, int verbose)
 	keyset_load_rsakey2048(root.FirstChild("ncchdescrsakey"), &keys->ncchdescrsakey);
 	keyset_load_rsakey2048(root.FirstChild("firmrsakey"), &keys->firmrsakey);
 	keyset_load_key128(root.FirstChild("commonkey"), &keys->commonkey);
-	keyset_load_key128(root.FirstChild("ncchctrkey"), &keys->ncchctrkey);
+	keyset_load_key128(root.FirstChild("ncchkey"), &keys->ncchkey);
+	keyset_load_key128(root.FirstChild("ncchfixedsystemkey"), &keys->ncchfixedsystemkey);
 
 
 	return 1;
@@ -168,8 +169,10 @@ int keyset_load(keyset* keys, const char* fname, int verbose)
 
 void keyset_merge(keyset* keys, keyset* src)
 {
-	if (src->ncchctrkey.valid)
-		keyset_set_key128(&keys->ncchctrkey, src->ncchctrkey.data);
+	if (src->ncchkey.valid)
+		keyset_set_key128(&keys->ncchkey, src->ncchkey.data);
+	if (src->ncchfixedsystemkey.valid)
+		keyset_set_key128(&keys->ncchfixedsystemkey, src->ncchfixedsystemkey.data);
 	if (src->commonkey.valid)
 		keyset_set_key128(&keys->commonkey, src->commonkey.data);
 }
@@ -195,14 +198,24 @@ void keyset_parse_commonkey(keyset* keys, char* keytext, int keylen)
 	keyset_parse_key128(&keys->commonkey, keytext, keylen);
 }
 
-void keyset_set_ncchctrkey(keyset* keys, unsigned char* keydata)
+void keyset_set_ncchkey(keyset* keys, unsigned char* keydata)
 {
-	keyset_set_key128(&keys->ncchctrkey, keydata);
+	keyset_set_key128(&keys->ncchkey, keydata);
 }
 
-void keyset_parse_ncchctrkey(keyset* keys, char* keytext, int keylen)
+void keyset_parse_ncchkey(keyset* keys, char* keytext, int keylen)
 {
-	keyset_parse_key128(&keys->ncchctrkey, keytext, keylen);
+	keyset_parse_key128(&keys->ncchkey, keytext, keylen);
+}
+
+void keyset_set_ncchfixedsystemkey(keyset* keys, unsigned char* keydata)
+{
+	keyset_set_key128(&keys->ncchfixedsystemkey, keydata);
+}
+
+void keyset_parse_ncchfixedsystemkey(keyset* keys, char* keytext, int keylen)
+{
+	keyset_parse_key128(&keys->ncchfixedsystemkey, keytext, keylen);
 }
 
 void keyset_dump_rsakey(rsakey2048* key, const char* keytitle)
@@ -237,7 +250,8 @@ void keyset_dump_key128(key128* key, const char* keytitle)
 void keyset_dump(keyset* keys)
 {
 	fprintf(stdout, "Current keyset:          \n");
-	keyset_dump_key128(&keys->ncchctrkey, "NCCH CTR KEY");
+	keyset_dump_key128(&keys->ncchkey, "NCCH KEY");
+	keyset_dump_key128(&keys->ncchfixedsystemkey, "NCCH FIXEDSYSTEMKEY");
 	keyset_dump_key128(&keys->commonkey, "COMMON KEY");
 
 	keyset_dump_rsakey(&keys->ncsdrsakey, "NCSD RSA KEY");

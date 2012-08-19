@@ -207,7 +207,7 @@ void cia_process(cia_context* ctx, u32 actions)
 
 	
 
-	if (settings_is_common_key_valid(ctx->usersettings))
+	if (settings_get_common_key(ctx->usersettings))
 		tik_get_decrypted_titlekey(&ctx->tik, ctx->titlekey);
 
 	tmd_set_file(&ctx->tmd, ctx->file);

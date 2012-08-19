@@ -54,6 +54,7 @@ typedef struct
 {
 	FILE* file;
 	u8 key[16];
+	u32 encrypted;
 	u32 offset;
 	u32 size;
 	settings* usersettings;
@@ -89,4 +90,5 @@ int ncch_extract_prepare(ncch_context* ctx, u32 type, u32 flags);
 int ncch_extract_buffer(ncch_context* ctx, u8* buffer, u32 buffersize, u32* outsize);
 u32 ncch_get_mediaunit_size(ncch_context* ctx);
 void ncch_get_counter(ncch_context* ctx, u8 counter[16], u8 type);
+void ncch_determine_key(ncch_context* ctx, u32 actions);
 #endif // _NCCH_H_

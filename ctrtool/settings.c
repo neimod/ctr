@@ -2,8 +2,6 @@
 #include <string.h>
 #include "settings.h"
 
-static unsigned char nullkey[16] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-
 void settings_init(settings* usersettings)
 {
 	memset(usersettings, 0, sizeof(settings));
@@ -108,24 +106,24 @@ unsigned int settings_get_mediaunit_size(settings* usersettings)
 
 unsigned char* settings_get_ncch_key(settings* usersettings)
 {
-	if (usersettings)
-		return usersettings->keys.ncchctrkey.data;
+	if (usersettings && usersettings->keys.ncchkey.valid)
+		return usersettings->keys.ncchkey.data;
 	else
-		return nullkey;
+		return 0;
+}
+
+unsigned char* settings_get_ncch_fixedsystemkey(settings* usersettings)
+{
+	if (usersettings && usersettings->keys.ncchfixedsystemkey.valid)
+		return usersettings->keys.ncchfixedsystemkey.data;
+	else
+		return 0;
 }
 
 unsigned char* settings_get_common_key(settings* usersettings)
 {
-	if (usersettings)
+	if (usersettings && usersettings->keys.commonkey.valid)
 		return usersettings->keys.commonkey.data;
-	else
-		return nullkey;
-}
-
-int settings_is_common_key_valid(settings* usersettings)
-{
-	if (usersettings)
-		return usersettings->keys.commonkey.valid;
 	else
 		return 0;
 }

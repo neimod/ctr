@@ -51,20 +51,31 @@ int exheader_get_compressedflag(exheader_context* ctx)
 	return ctx->compressedflag;
 }
 
-void exheader_set_cryptoflag(exheader_context* ctx, u32 cryptoflag)
+void exheader_set_encrypted(exheader_context* ctx, u32 encrypted)
 {
-	ctx->cryptoflag = cryptoflag;
+	ctx->encrypted = encrypted;
 }
 
-int exheader_encrypted(exheader_context* ctx, u32 flags)
+void exheader_set_key(exheader_context* ctx, u8 key[16])
 {
-	if (flags & PlainFlag)
-		return 0;
-		
-	if (ctx->cryptoflag & 4)
-		return 0;
-	
-	return 1;
+	memcpy(ctx->key, key, 16);
+}
+
+
+void exheader_determine_key(exheader_context* ctx, u32 actions)
+{
+	u8* key = settings_get_ncch_key(ctx->usersettings);
+
+	if (actions & PlainFlag)
+		ctx->encrypted = 0;
+	else
+	{
+		if (key)
+		{
+			ctx->encrypted = 1;
+			memcpy(ctx->key, key, 0x10);
+		}
+	}
 }
 
 void exheader_read(exheader_context* ctx, u32 actions)
@@ -75,8 +86,8 @@ void exheader_read(exheader_context* ctx, u32 actions)
 		fread(&ctx->header, 1, sizeof(exheader_header), ctx->file);
 
 
-		ctr_init_counter(&ctx->aes, settings_get_ncch_key(ctx->usersettings), ctx->counter);
-		if (exheader_encrypted(ctx, actions))
+		ctr_init_counter(&ctx->aes, ctx->key, ctx->counter);
+		if (ctx->encrypted)
 			ctr_crypt_counter(&ctx->aes, (u8*)&ctx->header, (u8*)&ctx->header, sizeof(exheader_header));
 
 		ctx->haveread = 1;
@@ -99,6 +110,8 @@ int exheader_programid_valid(exheader_context* ctx)
 
 int exheader_process(exheader_context* ctx, u32 actions)
 {
+	exheader_determine_key(ctx, actions);
+
 	exheader_read(ctx, actions);
 
 	if (ctx->header.codesetinfo.flags.flag & 1)

@@ -108,13 +108,14 @@ typedef struct
 	u8 partitionid[8];
 	u8 programid[8];
 	u8 counter[16];
+	u8 key[16];
 	u32 offset;
 	u32 size;
 	exheader_header header;
 	ctr_aes_context aes;
 	ctr_rsa_context rsa;
 	int compressedflag;
-	int cryptoflag;
+	int encrypted;
 	int validprogramid;
 	int validpriority;
 	int validaffinitymask;
@@ -128,7 +129,8 @@ void exheader_set_size(exheader_context* ctx, u32 size);
 void exheader_set_partitionid(exheader_context* ctx, u8 partitionid[8]);
 void exheader_set_counter(exheader_context* ctx, u8 counter[16]);
 void exheader_set_programid(exheader_context* ctx, u8 programid[8]);
-void exheader_set_cryptoflag(exheader_context* ctx, u32 cryptoflag);
+void exheader_set_encrypted(exheader_context* ctx, u32 encrypted);
+void exheader_set_key(exheader_context* ctx, u8 key[16]);
 void exheader_set_usersettings(exheader_context* ctx, settings* usersettings);
 int exheader_get_compressedflag(exheader_context* ctx);
 void exheader_read(exheader_context* ctx, u32 actions);
@@ -136,5 +138,6 @@ int exheader_process(exheader_context* ctx, u32 actions);
 void exheader_print(exheader_context* ctx);
 void exheader_verify(exheader_context* ctx);
 int exheader_programid_valid(exheader_context* ctx);
+void exheader_determine_key(exheader_context* ctx, u32 actions);
 
 #endif // _EXHEADER_H_

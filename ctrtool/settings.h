@@ -37,8 +37,8 @@ filepath* settings_get_exefs_dir_path(settings* usersettings);
 filepath* settings_get_firm_dir_path(settings* usersettings);
 unsigned int settings_get_mediaunit_size(settings* usersettings);
 unsigned char* settings_get_ncch_key(settings* usersettings);
+unsigned char* settings_get_ncch_fixedsystemkey(settings* usersettings);
 unsigned char* settings_get_common_key(settings* usersettings);
-int settings_is_common_key_valid(settings* usersettings);
 int settings_get_ignore_programid(settings* usersettings);
 
 void settings_set_lzss_path(settings* usersettings, const char* path);

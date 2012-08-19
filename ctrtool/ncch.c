@@ -7,6 +7,16 @@
 #include "ctr.h"
 #include "settings.h"
 
+static int programid_is_system(u8 programid[8])
+{
+	u32 hiprogramid = getle32(programid+4);
+	
+	if ( ((hiprogramid >> 14) == 0x10) && (hiprogramid & 0x10) )
+		return 1;
+	else
+		return 0;
+}
+
 
 void ncch_init(ncch_context* ctx)
 {
@@ -32,17 +42,6 @@ void ncch_set_size(ncch_context* ctx, u32 size)
 void ncch_set_file(ncch_context* ctx, FILE* file)
 {
 	ctx->file = file;
-}
-
-int ncch_encrypted(ncch_context* ctx, u32 flags)
-{
-	if (flags & PlainFlag)
-		return 0;
-		
-	if (ctx->header.flags[7] & 4)
-		return 0;
-	
-	return 1;
 }
 
 void ncch_get_counter(ncch_context* ctx, u8 counter[16], u8 type)
@@ -146,7 +145,7 @@ int ncch_extract_buffer(ncch_context* ctx, u8* buffer, u32 buffersize, u32* outs
 			goto clean;
 		}
 
-		if (ncch_encrypted(ctx, ctx->extractflags))
+		if (ctx->encrypted)
 			ctr_crypt_counter(&ctx->aes, buffer, buffer, max);
 
 		ctx->extractsize -= max;
@@ -292,6 +291,8 @@ void ncch_process(ncch_context* ctx, u32 actions)
 		return;
 	}
 
+	ncch_determine_key(ctx, actions);
+
 	ncch_get_counter(ctx, exheadercounter, NCCHTYPE_EXHEADER);
 	ncch_get_counter(ctx, exefscounter, NCCHTYPE_EXEFS);
 
@@ -303,7 +304,8 @@ void ncch_process(ncch_context* ctx, u32 actions)
 	exheader_set_partitionid(&ctx->exheader, ctx->header.partitionid);
 	exheader_set_programid(&ctx->exheader, ctx->header.programid);
 	exheader_set_counter(&ctx->exheader, exheadercounter);
-	exheader_set_cryptoflag(&ctx->exheader, ctx->header.flags[7]);
+	exheader_set_key(&ctx->exheader, ctx->key);
+	exheader_set_encrypted(&ctx->exheader, ctx->encrypted);
 
 	exefs_set_file(&ctx->exefs, ctx->file);
 	exefs_set_offset(&ctx->exefs, ncch_get_exefs_offset(ctx) );
@@ -311,7 +313,8 @@ void ncch_process(ncch_context* ctx, u32 actions)
 	exefs_set_partitionid(&ctx->exefs, ctx->header.partitionid);
 	exefs_set_usersettings(&ctx->exefs, ctx->usersettings);
 	exefs_set_counter(&ctx->exefs, exefscounter);
-	exefs_set_cryptoflag(&ctx->exefs, ctx->header.flags[7]);
+	exefs_set_key(&ctx->exefs, ctx->key);
+	exefs_set_encrypted(&ctx->exefs, ctx->encrypted);
 
 	exheader_read(&ctx->exheader, actions);
 
@@ -398,6 +401,74 @@ u32 ncch_get_mediaunit_size(ncch_context* ctx)
 	return mediaunitsize;
 }
 
+
+void ncch_determine_key(ncch_context* ctx, u32 actions)
+{
+	exheader_header exheader;
+	u8* key = settings_get_ncch_key(ctx->usersettings);
+	ctr_ncchheader* header = &ctx->header;
+
+	ctx->encrypted = 0;
+	memset(ctx->key, 0, 0x10);
+
+	if (actions & PlainFlag)
+	{
+		ctx->encrypted = 0;
+	} 
+	else if (key != 0)
+	{
+		ctx->encrypted = 1;
+		memcpy(ctx->key, key, 0x10);
+	}
+	else
+	{
+		// No explicit NCCH key defined, so we try to decide
+		
+
+		// Firstly, check if the NCCH is already decrypted, by reading the programid in the exheader
+		// Otherwise, use determination rules
+		fseek(ctx->file, ncch_get_exheader_offset(ctx), SEEK_SET);
+		memset(&exheader, 0, sizeof(exheader));
+		fread(&exheader, 1, sizeof(exheader), ctx->file);
+
+		if (!memcmp(exheader.arm11systemlocalcaps.programid, ctx->header.programid, 8))
+		{
+			// program id's match, so it's probably not encrypted
+			ctx->encrypted = 0;
+		}
+		else if (header->flags[7] & 4)
+		{
+			ctx->encrypted = 0; // not encrypted
+		}
+		else if (header->flags[7] & 1)
+		{
+			if (programid_is_system(header->programid))
+			{
+				// fixed system key
+				ctx->encrypted = 1;
+				key = settings_get_ncch_fixedsystemkey(ctx->usersettings);
+				if (!key)
+					fprintf(stdout, "Warning, could not read system fixed key.\n");
+				else
+					memcpy(ctx->key, key, 0x10);
+			}
+			else
+			{
+				// null key
+				ctx->encrypted = 1;
+				memset(ctx->key, 0, 0x10);
+			}
+		}
+		else
+		{
+			// secure key (cannot decrypt!)
+			fprintf(stdout, "Warning, could not read secure key.\n");
+			ctx->encrypted = 1;
+			memset(ctx->key, 0, 0x10);
+		}
+	}
+}
+
 static const char* formtypetostring(unsigned char flags)
 {
 	unsigned char formtype = flags & 3;
@@ -470,7 +541,7 @@ void ncch_print(ncch_context* ctx)
 	if (header->flags[7] & 4)
 		fprintf(stdout, " > Crypto key:          None\n");
 	else if (header->flags[7] & 1)
-		fprintf(stdout, " > Crypto key:          Zeros/Fixed\n");
+		fprintf(stdout, " > Crypto key:          %s\n", programid_is_system(header->programid)? "Fixed":"Zeros");
 	else
 		fprintf(stdout, " > Crypto key:          Secure\n");
 	fprintf(stdout, " > Form type:           %s\n", formtypetostring(header->flags[5]));

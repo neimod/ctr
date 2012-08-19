@@ -43,9 +43,14 @@ void exefs_set_compressedflag(exefs_context* ctx, int compressedflag)
 	ctx->compressedflag = compressedflag;
 }
 
-void exefs_set_cryptoflag(exefs_context* ctx, int cryptoflag)
+void exefs_set_encrypted(exefs_context* ctx, u32 encrypted)
 {
-	ctx->cryptoflag = cryptoflag;
+	ctx->encrypted = encrypted;
+}
+
+void exefs_set_key(exefs_context* ctx, u8 key[16])
+{
+	memcpy(ctx->key, key, 16);
 }
 
 void exefs_set_counter(exefs_context* ctx, u8 counter[16])
@@ -53,15 +58,20 @@ void exefs_set_counter(exefs_context* ctx, u8 counter[16])
 	memcpy(ctx->counter, counter, 16);
 }
 
-int exefs_encrypted(exefs_context* ctx, u32 flags)
+void exefs_determine_key(exefs_context* ctx, u32 actions)
 {
-	if (flags & PlainFlag)
-		return 0;
-		
-	if (ctx->cryptoflag & 4)
-		return 0;
-	
-	return 1;
+	u8* key = settings_get_ncch_key(ctx->usersettings);
+
+	if (actions & PlainFlag)
+		ctx->encrypted = 0;
+	else
+	{
+		if (key)
+		{
+			ctx->encrypted = 1;
+			memcpy(ctx->key, key, 0x10);
+		}
+	}
 }
 
 void exefs_save(exefs_context* ctx, u32 index, u32 flags)
@@ -116,7 +126,7 @@ void exefs_save(exefs_context* ctx, u32 index, u32 flags)
 	
 
 	fseek(ctx->file, ctx->offset + offset, SEEK_SET);
-	ctr_init_counter(&ctx->aes, settings_get_ncch_key(ctx->usersettings), ctx->counter);
+	ctr_init_counter(&ctx->aes, ctx->key, ctx->counter);
 	ctr_add_counter(&ctx->aes, offset / 0x10);
 
 	if (index == 0 && ctx->compressedflag && ((flags & RawFlag) == 0))
@@ -137,7 +147,7 @@ void exefs_save(exefs_context* ctx, u32 index, u32 flags)
 			goto clean;
 		}
 
-		if (exefs_encrypted(ctx, flags))
+		if (ctx->encrypted)
 			ctr_crypt_counter(&ctx->aes, compressedbuffer, compressedbuffer, compressedsize);
 
 
@@ -176,7 +186,7 @@ void exefs_save(exefs_context* ctx, u32 index, u32 flags)
 				goto clean;
 			}
 
-			if (exefs_encrypted(ctx, flags))
+			if (ctx->encrypted)
 				ctr_crypt_counter(&ctx->aes, buffer, buffer, max);
 
 			if (max != fwrite(buffer, 1, max, fout))
@@ -200,9 +210,9 @@ void exefs_read_header(exefs_context* ctx, u32 flags)
 	fseek(ctx->file, ctx->offset, SEEK_SET);
 	fread(&ctx->header, 1, sizeof(exefs_header), ctx->file);
 
-	ctr_init_counter(&ctx->aes, settings_get_ncch_key(ctx->usersettings), ctx->counter);
+	ctr_init_counter(&ctx->aes, ctx->key, ctx->counter);
 
-	if (exefs_encrypted(ctx, flags))
+	if (ctx->encrypted)
 		ctr_crypt_counter(&ctx->aes, (u8*)&ctx->header, (u8*)&ctx->header, sizeof(exefs_header));
 }
 
@@ -214,6 +224,8 @@ void exefs_calculate_hash(exefs_context* ctx, u8 hash[32])
 void exefs_process(exefs_context* ctx, u32 actions)
 {
 	u32 i;
+
+	exefs_determine_key(ctx, actions);
 
 	exefs_read_header(ctx, actions);
 
@@ -257,7 +269,7 @@ int exefs_verify(exefs_context* ctx, u32 index, u32 flags)
 		return 0;
 
 	fseek(ctx->file, ctx->offset + offset, SEEK_SET);
-	ctr_init_counter(&ctx->aes, settings_get_ncch_key(ctx->usersettings), ctx->counter);
+	ctr_init_counter(&ctx->aes, ctx->key, ctx->counter);
 	ctr_add_counter(&ctx->aes, offset / 0x10);
 
 	ctr_sha_256_init(&ctx->sha);
@@ -274,7 +286,7 @@ int exefs_verify(exefs_context* ctx, u32 index, u32 flags)
 			goto clean;
 		}
 
-		if (exefs_encrypted(ctx, flags))
+		if (ctx->encrypted)
 			ctr_crypt_counter(&ctx->aes, buffer, buffer, max);
 
 		ctr_sha_256_update(&ctx->sha, buffer, max);
