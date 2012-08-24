@@ -83,8 +83,7 @@ void cwav_process(cwav_context* ctx, u32 actions)
 
 	if (actions & ExtractFlag)
 	{
-		
-		filepath* path = settings_get_lzss_path(ctx->usersettings);
+		filepath* path = settings_get_wav_path(ctx->usersettings);
 
 		if (path && path->valid)
 			cwav_save_adpcm_to_wav(ctx, path->pathname);
