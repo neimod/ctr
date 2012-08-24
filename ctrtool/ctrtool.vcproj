@@ -183,6 +183,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\cwav.c"
+				>
+			</File>
+			<File
 				RelativePath=".\exefs.c"
 				>
 			</File>
@@ -228,6 +232,10 @@
 			</File>
 			<File
 				RelativePath=".\settings.c"
+				>
+			</File>
+			<File
+				RelativePath=".\stream.c"
 				>
 			</File>
 			<File
@@ -297,6 +305,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\cwav.h"
+				>
+			</File>
+			<File
 				RelativePath=".\exefs.h"
 				>
 			</File>
@@ -338,6 +350,10 @@
 			</File>
 			<File
 				RelativePath=".\settings.h"
+				>
+			</File>
+			<File
+				RelativePath=".\stream.h"
 				>
 			</File>
 			<File

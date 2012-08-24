@@ -19,6 +19,8 @@ u32 getle16(const u8* p);
 u64 getbe64(const u8* p);
 u32 getbe32(const u8* p);
 u32 getbe16(const u8* p);
+void putle16(u8* p, u16 n);
+void putle32(u8* p, u32 n);
 
 void readkeyfile(u8* key, const char* keyfname);
 void memdump(FILE* fout, const char* prefix, const u8* data, u32 size);

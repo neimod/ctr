@@ -7,6 +7,14 @@ void settings_init(settings* usersettings)
 	memset(usersettings, 0, sizeof(settings));
 }
 
+filepath* settings_get_wav_path(settings* usersettings)
+{
+	if (usersettings)
+		return &usersettings->wavpath;
+	else
+		return 0;
+}
+
 filepath* settings_get_lzss_path(settings* usersettings)
 {
 	if (usersettings)
@@ -135,6 +143,11 @@ int settings_get_ignore_programid(settings* usersettings)
 		return usersettings->ignoreprogramid;
 	else
 		return 0;
+}
+
+void settings_set_wav_path(settings* usersettings, const char* path)
+{
+	filepath_set(&usersettings->wavpath, path);
 }
 
 void settings_set_lzss_path(settings* usersettings, const char* path)

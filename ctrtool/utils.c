@@ -67,6 +67,19 @@ u32 getbe16(const u8* p)
 	return (p[0]<<8) | (p[1]<<0);
 }
 
+void putle16(u8* p, u16 n)
+{
+	p[0] = n;
+	p[1] = n>>8;
+}
+
+void putle32(u8* p, u32 n)
+{
+	p[0] = n;
+	p[1] = n>>8;
+	p[2] = n>>16;
+	p[3] = n>>24;
+}
 
 
 void readkeyfile(u8* key, const char* keyfname)

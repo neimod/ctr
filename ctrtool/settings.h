@@ -19,6 +19,7 @@ typedef struct
 	filepath tmdpath;
 	filepath metapath;	
 	filepath lzsspath;
+	filepath wavpath;
 	unsigned int mediaunitsize;
 	int ignoreprogramid;
 } settings;
@@ -35,6 +36,7 @@ filepath* settings_get_meta_path(settings* usersettings);
 filepath* settings_get_content_path(settings* usersettings);
 filepath* settings_get_exefs_dir_path(settings* usersettings);
 filepath* settings_get_firm_dir_path(settings* usersettings);
+filepath* settings_get_wav_path(settings* usersettings);
 unsigned int settings_get_mediaunit_size(settings* usersettings);
 unsigned char* settings_get_ncch_key(settings* usersettings);
 unsigned char* settings_get_ncch_fixedsystemkey(settings* usersettings);
@@ -52,6 +54,7 @@ void settings_set_meta_path(settings* usersettings, const char* path);
 void settings_set_content_path(settings* usersettings, const char* path);
 void settings_set_exefs_dir_path(settings* usersettings, const char* path);
 void settings_set_firm_dir_path(settings* usersettings, const char* path);
+void settings_set_wav_path(settings* usersettings, const char* path);
 void settings_set_mediaunit_size(settings* usersettings, unsigned int size);
 void settings_set_ignore_programid(settings* usersettings, int enable);
 

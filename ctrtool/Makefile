@@ -1,4 +1,4 @@
-OBJS = keyset.o main.o ctr.o ncsd.o cia.o tik.o tmd.o filepath.o lzss.o exheader.o exefs.o ncch.o utils.o settings.o firm.o
+OBJS = keyset.o main.o ctr.o ncsd.o cia.o tik.o tmd.o filepath.o lzss.o exheader.o exefs.o ncch.o utils.o settings.o firm.o cwav.o stream.o
 POLAR_OBJS = polarssl/aes.o polarssl/bignum.o polarssl/rsa.o polarssl/sha2.o
 TINYXML_OBJS = tinyxml/tinystr.o tinyxml/tinyxml.o tinyxml/tinyxmlerror.o tinyxml/tinyxmlparser.o
 LIBS = -lstdc++

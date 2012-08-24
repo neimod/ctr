@@ -85,7 +85,6 @@ void exheader_read(exheader_context* ctx, u32 actions)
 		fseek(ctx->file, ctx->offset, SEEK_SET);
 		fread(&ctx->header, 1, sizeof(exheader_header), ctx->file);
 
-
 		ctr_init_counter(&ctx->aes, ctx->key, ctx->counter);
 		if (ctx->encrypted)
 			ctr_crypt_counter(&ctx->aes, (u8*)&ctx->header, (u8*)&ctx->header, sizeof(exheader_header));

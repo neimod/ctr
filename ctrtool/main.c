@@ -15,6 +15,7 @@
 #include "info.h"
 #include "settings.h"
 #include "firm.h"
+#include "cwav.h"
 
 enum cryptotype
 {
@@ -54,7 +55,8 @@ static void usage(const char *argv0)
 		   "  --ncchkey=key      Set ncch key.\n"
 		   "  --ncchsyskey=key   Set ncch fixed system key.\n"
 		   "  --showkeys         Show the keys being used.\n"
-		   "  -t, --intype=type	 Specify input file type [ncsd, ncch, exheader, cia, tmd, lzss, firm]\n"
+		   "  -t, --intype=type	 Specify input file type [ncsd, ncch, exheader, cia, tmd, lzss,\n"
+		   "                        firm, cwav]\n"
 		   "LZSS options:\n"
 		   "  --lzssout=file	 Specify lzss output file\n"
 		   "CXI/CCI options:\n"
@@ -71,6 +73,8 @@ static void usage(const char *argv0)
 		   "  --meta=file        Specify Meta file path.\n"
 		   "FIRM options:\n"
 		   "  --firmdir=dir      Specify Firm directory path.\n"
+		   "CWAV options:\n"
+		   "  --wav=file         Specify wav output file.\n"
            "\n",
 		   argv0);
    exit(1);
@@ -127,6 +131,7 @@ int main(int argc, char* argv[])
 			{"lzssout", 1, NULL, 13},
 			{"firmdir", 1, NULL, 14},
 			{"ncchsyskey", 1, NULL, 15},
+			{"wav", 1, NULL, 16},
 			{NULL},
 		};
 
@@ -184,6 +189,8 @@ int main(int argc, char* argv[])
 					ctx.filetype = FILETYPE_LZSS;
 				else if (!strcmp(optarg, "firm"))
 					ctx.filetype = FILETYPE_FIRM;
+				else if (!strcmp(optarg, "cwav"))
+					ctx.filetype = FILETYPE_CWAV;
 			break;
 
 			case 0: settings_set_exefs_path(&ctx.usersettings, optarg); break;
@@ -202,6 +209,7 @@ int main(int argc, char* argv[])
 			case 13: settings_set_lzss_path(&ctx.usersettings, optarg); break;
 			case 14: settings_set_firm_dir_path(&ctx.usersettings, optarg); break;
 			case 15: keyset_parse_ncchfixedsystemkey(&tmpkeys, optarg, strlen(optarg)); break;
+			case 16: settings_set_wav_path(&ctx.usersettings, optarg); break;
 
 
 			default:
@@ -273,6 +281,10 @@ int main(int argc, char* argv[])
 
 			case MAGIC_FIRM:
 				ctx.filetype = FILETYPE_FIRM;
+			break;
+
+			case MAGIC_CWAV:
+				ctx.filetype = FILETYPE_CWAV;
 			break;
 		}
 	}
@@ -376,6 +388,20 @@ int main(int argc, char* argv[])
 			lzss_set_size(&lzssctx, ctx.infilesize);
 			lzss_set_usersettings(&lzssctx, &ctx.usersettings);
 			lzss_process(&lzssctx, ctx.actions);
+	
+			break;
+		}
+
+
+		case FILETYPE_CWAV:
+		{
+			cwav_context cwavctx;
+
+			cwav_init(&cwavctx);
+			cwav_set_file(&cwavctx, ctx.infile);
+			cwav_set_size(&cwavctx, ctx.infilesize);
+			cwav_set_usersettings(&cwavctx, &ctx.usersettings);
+			cwav_process(&cwavctx, ctx.actions);
 	
 			break;
 		}
