@@ -6,6 +6,11 @@
 #include "settings.h"
 #include "stream.h"
 
+#define CWAV_ENCODING_PCM8			0
+#define CWAV_ENCODING_PCM16			1
+#define CWAV_ENCODING_DSPADPCM		2
+#define CWAV_ENCODING_IMAADPCM		3
+
 typedef struct
 {
 	u8 idtype[2];
@@ -67,6 +72,16 @@ typedef struct
 	u8 loopyn2[2];
 } cwav_dspadpcminfo;
 
+typedef struct
+{
+	u8 data[2];
+	u8 tableindex;
+	u8 padding;
+	u8 loopdata[2];
+	u8 looptableindex;
+	u8 looppadding;
+} cwav_imaadpcminfo;
+
 
 typedef struct
 {
@@ -86,12 +101,47 @@ typedef struct
 	u32 samplecountremaining;
 } cwav_dspadpcmstate;
 
+typedef struct
+{
+	s16 data;
+	u8 tableindex;
+	u32 sampleoffset;
+	s16* samplebuffer;
+	stream_in_context instreamctx;
+} cwav_imaadpcmchannelstate;
+
+typedef struct
+{
+	cwav_imaadpcmchannelstate* channelstate;
+	s16* samplebuffer;
+	u32 samplecountavailable;
+	u32 samplecountcapacity;
+	u32 samplecountremaining;
+} cwav_imaadpcmstate;
+
+typedef struct
+{
+	u32 sampleoffset;
+	s16* samplebuffer;
+	stream_in_context instreamctx;
+} cwav_pcmchannelstate;
+
+typedef struct
+{
+	cwav_pcmchannelstate* channelstate;
+	s16* samplebuffer;
+	u32 samplecountavailable;
+	u32 samplecountcapacity;
+	u32 samplecountremaining;
+} cwav_pcmstate;
+
 
 typedef struct
 {
 	cwav_reference inforef;
 	cwav_channelinfo info;
-	cwav_dspadpcminfo infoadpcm;
+	cwav_dspadpcminfo infodspadpcm;
+	cwav_imaadpcminfo infoimaadpcm;
 } cwav_channel;
 
 typedef struct
@@ -129,13 +179,24 @@ void cwav_set_offset(cwav_context* ctx, u32 offset);
 void cwav_set_size(cwav_context* ctx, u32 size);
 void cwav_set_usersettings(cwav_context* ctx, settings* usersettings);
 void cwav_process(cwav_context* ctx, u32 actions);
-int  cwav_decode_adpcm(cwav_context* ctx, stream_out_context* outstreamctx, u32 channel);
 void cwav_dspadpcm_init(cwav_dspadpcmstate* state);
 int  cwav_dspadpcm_setup(cwav_dspadpcmstate* state, cwav_context* ctx);
 int  cwav_dspadpcm_decode(cwav_dspadpcmstate* state, cwav_context* ctx);
+int	 cwav_dspadpcm_decode_to_wav(cwav_context* ctx, stream_out_context* outstreamctx);
 void cwav_dspadpcm_destroy(cwav_dspadpcmstate* state);
+void cwav_imaadpcm_init(cwav_imaadpcmstate* state);
+int  cwav_imaadpcm_setup(cwav_imaadpcmstate* state, cwav_context* ctx);
+int  cwav_imaadpcm_decode(cwav_imaadpcmstate* state, cwav_context* ctx);
+int	 cwav_imaadpcm_decode_to_wav(cwav_context* ctx, stream_out_context* outstreamctx);
+u8   cwav_imaadpcm_clamp_tableindex(u8 tableindex, int inc);
+void cwav_imaadpcm_destroy(cwav_imaadpcmstate* state);
+void cwav_pcm_init(cwav_pcmstate* state);
+int  cwav_pcm_setup(cwav_pcmstate* state, cwav_context* ctx);
+int  cwav_pcm_decode(cwav_pcmstate* state, cwav_context* ctx);
+int	 cwav_pcm_decode_to_wav(cwav_context* ctx, stream_out_context* outstreamctx);
+void cwav_pcm_destroy(cwav_pcmstate* state);
 void cwav_write_wav_header(cwav_context* ctx, stream_out_context* outstreamctx, u32 size);
-int  cwav_save_adpcm_to_wav(cwav_context* ctx, const char* filepath);
+int  cwav_save_to_wav(cwav_context* ctx, const char* filepath);
 void cwav_print(cwav_context* ctx);
 
 #endif // _CWAV_H_
