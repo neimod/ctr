@@ -151,38 +151,45 @@ void cwav_write_wav_header(cwav_context* ctx, stream_out_context* outstreamctx, 
 
 int cwav_dspadpcm_decode_to_wav(cwav_context* ctx, stream_out_context* outstreamctx)
 {
-	u32 s, c;
+	u32 s, c, i;
 	int result = 0;
 	cwav_dspadpcmstate state;
-
+	u32 loopcount = settings_get_cwav_loopcount(ctx->usersettings);
 
 	cwav_dspadpcm_init(&state);
 
-
-	if (0 == cwav_dspadpcm_setup(&state, ctx))
+	if (0 == cwav_dspadpcm_allocate(&state, ctx))
 		goto clean;
 
-	while(1)
+	for(i=0; i<1+loopcount; i++)
 	{
-		if (0 == cwav_dspadpcm_decode(&state, ctx))
+		int isloop = (i != 0);
+
+		if (0 == cwav_dspadpcm_setup(&state, ctx, isloop))
 			goto clean;
 
-		if (state.samplecountavailable == 0)
-			break;
-
-		for(s=0; s<state.samplecountavailable; s++)
+		while(1)
 		{
-			for(c=0; c<ctx->channelcount; c++)
-			{
-				s16 sampledata = state.channelstate[c].samplebuffer[s];
+			if (0 == cwav_dspadpcm_decode(&state, ctx))
+				goto clean;
 
-				if (!stream_out_byte(outstreamctx, 0xFF & sampledata) || !stream_out_byte(outstreamctx, 0xFF & (sampledata>>8)))
+			if (state.samplecountavailable == 0)
+				break;
+
+			for(s=0; s<state.samplecountavailable; s++)
+			{
+				for(c=0; c<ctx->channelcount; c++)
 				{
-					fprintf(stderr, "Error writing output stream\n");
-					goto clean;
+					s16 sampledata = state.channelstate[c].samplebuffer[s];
+
+					if (!stream_out_byte(outstreamctx, 0xFF & sampledata) || !stream_out_byte(outstreamctx, 0xFF & (sampledata>>8)))
+					{
+						fprintf(stderr, "Error writing output stream\n");
+						goto clean;
+					}
 				}
-			}
-		}	
+			}	
+		}
 	}
 
 	result = 1;
@@ -196,38 +203,45 @@ clean:
 
 int cwav_imaadpcm_decode_to_wav(cwav_context* ctx, stream_out_context* outstreamctx)
 {
-	u32 s, c;
+	u32 s, c, i;
 	int result = 0;
 	cwav_imaadpcmstate state;
+	u32 loopcount = settings_get_cwav_loopcount(ctx->usersettings);
 
 
 	cwav_imaadpcm_init(&state);
-
-
-	if (0 == cwav_imaadpcm_setup(&state, ctx))
+	if (0 == cwav_imaadpcm_allocate(&state, ctx))
 		goto clean;
 
-	while(1)
+	for(i=0; i<1+loopcount; i++)
 	{
-		if (0 == cwav_imaadpcm_decode(&state, ctx))
+		int isloop = (i != 0);
+
+		if (0 == cwav_imaadpcm_setup(&state, ctx, isloop))
 			goto clean;
 
-		if (state.samplecountavailable == 0)
-			break;
-
-		for(s=0; s<state.samplecountavailable; s++)
+		while(1)
 		{
-			for(c=0; c<ctx->channelcount; c++)
-			{
-				s16 sampledata = state.channelstate[c].samplebuffer[s];
+			if (0 == cwav_imaadpcm_decode(&state, ctx))
+				goto clean;
 
-				if (!stream_out_byte(outstreamctx, 0xFF & sampledata) || !stream_out_byte(outstreamctx, 0xFF & (sampledata>>8)))
+			if (state.samplecountavailable == 0)
+				break;
+
+			for(s=0; s<state.samplecountavailable; s++)
+			{
+				for(c=0; c<ctx->channelcount; c++)
 				{
-					fprintf(stderr, "Error writing output stream\n");
-					goto clean;
+					s16 sampledata = state.channelstate[c].samplebuffer[s];
+
+					if (!stream_out_byte(outstreamctx, 0xFF & sampledata) || !stream_out_byte(outstreamctx, 0xFF & (sampledata>>8)))
+					{
+						fprintf(stderr, "Error writing output stream\n");
+						goto clean;
+					}
 				}
-			}
-		}	
+			}	
+		}
 	}
 
 	result = 1;
@@ -241,38 +255,47 @@ clean:
 
 int cwav_pcm_decode_to_wav(cwav_context* ctx, stream_out_context* outstreamctx)
 {
-	u32 s, c;
+	u32 s, c, i;
 	int result = 0;
 	cwav_pcmstate state;
+	u32 loopcount = settings_get_cwav_loopcount(ctx->usersettings);
 
 
 	cwav_pcm_init(&state);
 
 
-	if (0 == cwav_pcm_setup(&state, ctx))
+	if (0 == cwav_pcm_allocate(&state, ctx))
 		goto clean;
 
-	while(1)
+	for(i=0; i<1+loopcount; i++)
 	{
-		if (0 == cwav_pcm_decode(&state, ctx))
+		int isloop = (i != 0);
+
+		if (0 == cwav_pcm_setup(&state, ctx, isloop))
 			goto clean;
 
-		if (state.samplecountavailable == 0)
-			break;
-
-		for(s=0; s<state.samplecountavailable; s++)
+		while(1)
 		{
-			for(c=0; c<ctx->channelcount; c++)
-			{
-				s16 sampledata = state.channelstate[c].samplebuffer[s];
+			if (0 == cwav_pcm_decode(&state, ctx))
+				goto clean;
 
-				if (!stream_out_byte(outstreamctx, 0xFF & sampledata) || !stream_out_byte(outstreamctx, 0xFF & (sampledata>>8)))
+			if (state.samplecountavailable == 0)
+				break;
+
+			for(s=0; s<state.samplecountavailable; s++)
+			{
+				for(c=0; c<ctx->channelcount; c++)
 				{
-					fprintf(stderr, "Error writing output stream\n");
-					goto clean;
+					s16 sampledata = state.channelstate[c].samplebuffer[s];
+
+					if (!stream_out_byte(outstreamctx, 0xFF & sampledata) || !stream_out_byte(outstreamctx, 0xFF & (sampledata>>8)))
+					{
+						fprintf(stderr, "Error writing output stream\n");
+						goto clean;
+					}
 				}
-			}
-		}	
+			}	
+		}
 	}
 
 	result = 1;
@@ -342,14 +365,16 @@ void cwav_dspadpcm_init(cwav_dspadpcmstate* state)
 	memset(state, 0, sizeof(cwav_dspadpcmstate));
 }
 
-int cwav_dspadpcm_setup(cwav_dspadpcmstate* state, cwav_context* ctx)
+int cwav_dspadpcm_allocate(cwav_dspadpcmstate* state, cwav_context* ctx)
 {
 	u32 channelcount = ctx->channelcount;
-	u32 i;
 
 
 	state->samplebuffer = malloc(sizeof(s16) * SAMPLECOUNT * channelcount);
 	state->channelstate = malloc(sizeof(cwav_dspadpcmchannelstate) * channelcount);
+	state->samplecountcapacity = SAMPLECOUNT;
+	state->samplecountavailable = 0;
+	state->samplecountremaining = 0;
 
 	if (ctx->channel == 0)
 		return 0;
@@ -360,9 +385,37 @@ int cwav_dspadpcm_setup(cwav_dspadpcmstate* state, cwav_context* ctx)
 		return 0;
 	}
 
+	return 1;
+}
+
+int cwav_dspadpcm_setup(cwav_dspadpcmstate* state, cwav_context* ctx, int isloop)
+{
+	u32 channelcount = ctx->channelcount;
+	u32 i;
+	u32 startoffset = 0;
+
+
+	if (ctx->channel == 0)
+		return 0;
+
+	if (state->samplebuffer == 0 || state->channelstate == 0)
+		return 0;
+
 	state->samplecountavailable = 0;
-	state->samplecountcapacity = SAMPLECOUNT;
-	state->samplecountremaining = getle32(ctx->infoheader.loopend);
+
+	if (isloop)
+	{
+		state->samplecountremaining = getle32(ctx->infoheader.loopend) - getle32(ctx->infoheader.loopstart);
+
+		startoffset = getle32(ctx->infoheader.loopstart) * 8 / 14;
+	}
+	else
+	{
+		state->samplecountremaining = getle32(ctx->infoheader.loopend);
+		startoffset = 0;
+	}
+
+	
 
 	for(i=0; i<channelcount; i++)
 	{
@@ -376,9 +429,17 @@ int cwav_dspadpcm_setup(cwav_dspadpcmstate* state, cwav_context* ctx)
 		}
 
 		state->channelstate[i].samplebuffer = state->samplebuffer + SAMPLECOUNT * i;
-		state->channelstate[i].sampleoffset = ctx->offset + getle32(adpcmchannel->info.sampleref.offset) + getle32(ctx->header.datablockref.offset) + 8;
-		state->channelstate[i].yn1 = getle16(adpcminfo->yn1);
-		state->channelstate[i].yn2 = getle16(adpcminfo->yn2);
+		state->channelstate[i].sampleoffset = ctx->offset + getle32(adpcmchannel->info.sampleref.offset) + getle32(ctx->header.datablockref.offset) + 8 + startoffset;
+		if (isloop)
+		{
+			state->channelstate[i].yn1 = getle16(adpcminfo->loopyn1);
+			state->channelstate[i].yn2 = getle16(adpcminfo->loopyn2);
+		}
+		else
+		{
+			state->channelstate[i].yn1 = getle16(adpcminfo->yn1);
+			state->channelstate[i].yn2 = getle16(adpcminfo->yn2);
+		}
 		stream_in_allocate(&state->channelstate[i].instreamctx, BUFFERSIZE, ctx->file);
 		stream_in_seek(&state->channelstate[i].instreamctx, state->channelstate[i].sampleoffset);
 	}
@@ -501,14 +562,36 @@ void cwav_imaadpcm_init(cwav_imaadpcmstate* state)
 	memset(state, 0, sizeof(cwav_imaadpcmstate));
 }
 
-int cwav_imaadpcm_setup(cwav_imaadpcmstate* state, cwav_context* ctx)
+
+int cwav_imaadpcm_allocate(cwav_imaadpcmstate* state, cwav_context* ctx)
 {
 	u32 channelcount = ctx->channelcount;
-	u32 i;
 
 
 	state->samplebuffer = malloc(sizeof(s16) * SAMPLECOUNT * channelcount);
 	state->channelstate = malloc(sizeof(cwav_imaadpcmchannelstate) * channelcount);
+	state->samplecountcapacity = SAMPLECOUNT;
+	state->samplecountavailable = 0;
+	state->samplecountremaining = 0;
+
+	if (ctx->channel == 0)
+		return 0;
+
+	if (state->samplebuffer == 0 || state->channelstate == 0)
+	{
+		fprintf(stderr, "Error allocating memory\n");
+		return 0;
+	}
+
+	return 1;
+}
+
+int cwav_imaadpcm_setup(cwav_imaadpcmstate* state, cwav_context* ctx, int isloop)
+{
+	u32 channelcount = ctx->channelcount;
+	u32 i;
+	u32 startoffset = 0;
+
 
 	if (ctx->channel == 0)
 		return 0;
@@ -520,8 +603,17 @@ int cwav_imaadpcm_setup(cwav_imaadpcmstate* state, cwav_context* ctx)
 	}
 
 	state->samplecountavailable = 0;
-	state->samplecountcapacity = SAMPLECOUNT;
-	state->samplecountremaining = getle32(ctx->infoheader.loopend);
+	if (isloop)
+	{
+		state->samplecountremaining = getle32(ctx->infoheader.loopend) - getle32(ctx->infoheader.loopstart);
+
+		startoffset = getle32(ctx->infoheader.loopstart) / 2;
+	}
+	else
+	{
+		state->samplecountremaining = getle32(ctx->infoheader.loopend);
+		startoffset = 0;
+	}
 
 	for(i=0; i<channelcount; i++)
 	{
@@ -535,9 +627,17 @@ int cwav_imaadpcm_setup(cwav_imaadpcmstate* state, cwav_context* ctx)
 		}
 
 		state->channelstate[i].samplebuffer = state->samplebuffer + SAMPLECOUNT * i;
-		state->channelstate[i].sampleoffset = ctx->offset + getle32(adpcmchannel->info.sampleref.offset) + getle32(ctx->header.datablockref.offset) + 8;
-		state->channelstate[i].data = getle16(adpcminfo->data);
-		state->channelstate[i].tableindex = adpcminfo->tableindex;
+		state->channelstate[i].sampleoffset = ctx->offset + getle32(adpcmchannel->info.sampleref.offset) + getle32(ctx->header.datablockref.offset) + 8 + startoffset;
+		if (isloop)
+		{
+			state->channelstate[i].data = getle16(adpcminfo->loopdata);
+			state->channelstate[i].tableindex = adpcminfo->looptableindex;
+		}
+		else
+		{
+			state->channelstate[i].data = getle16(adpcminfo->data);
+			state->channelstate[i].tableindex = adpcminfo->tableindex;
+		}
 		stream_in_allocate(&state->channelstate[i].instreamctx, BUFFERSIZE, ctx->file);
 		stream_in_seek(&state->channelstate[i].instreamctx, state->channelstate[i].sampleoffset);
 	}
@@ -665,14 +765,35 @@ void cwav_pcm_init(cwav_pcmstate* state)
 	memset(state, 0, sizeof(cwav_pcmstate));
 }
 
-int cwav_pcm_setup(cwav_pcmstate* state, cwav_context* ctx)
+int cwav_pcm_allocate(cwav_pcmstate* state, cwav_context* ctx)
 {
 	u32 channelcount = ctx->channelcount;
-	u32 i;
 
 
 	state->samplebuffer = malloc(sizeof(s16) * SAMPLECOUNT * channelcount);
 	state->channelstate = malloc(sizeof(cwav_pcmchannelstate) * channelcount);
+	state->samplecountcapacity = SAMPLECOUNT;
+	state->samplecountavailable = 0;
+	state->samplecountremaining = 0;
+
+	if (ctx->channel == 0)
+		return 0;
+
+	if (state->samplebuffer == 0 || state->channelstate == 0)
+	{
+		fprintf(stderr, "Error allocating memory\n");
+		return 0;
+	}
+
+	return 1;
+}
+
+int cwav_pcm_setup(cwav_pcmstate* state, cwav_context* ctx, int isloop)
+{
+	u32 channelcount = ctx->channelcount;
+	u32 i;
+	u32 startoffset;
+
 
 	if (ctx->channel == 0)
 		return 0;
@@ -685,14 +806,27 @@ int cwav_pcm_setup(cwav_pcmstate* state, cwav_context* ctx)
 
 	state->samplecountavailable = 0;
 	state->samplecountcapacity = SAMPLECOUNT;
-	state->samplecountremaining = getle32(ctx->infoheader.loopend);
+	if (isloop)
+	{
+		state->samplecountremaining = getle32(ctx->infoheader.loopend) - getle32(ctx->infoheader.loopstart);
+
+		if (ctx->infoheader.encoding == CWAV_ENCODING_PCM8)
+			startoffset = getle32(ctx->infoheader.loopstart);
+		else if (ctx->infoheader.encoding == CWAV_ENCODING_PCM16)
+			startoffset = getle32(ctx->infoheader.loopstart) * 2;
+	}
+	else
+	{
+		state->samplecountremaining = getle32(ctx->infoheader.loopend);
+		startoffset = 0;
+	}
 
 	for(i=0; i<channelcount; i++)
 	{
 		cwav_channel* pcmchannel = &ctx->channel[i];
 
 		state->channelstate[i].samplebuffer = state->samplebuffer + SAMPLECOUNT * i;
-		state->channelstate[i].sampleoffset = ctx->offset + getle32(pcmchannel->info.sampleref.offset) + getle32(ctx->header.datablockref.offset) + 8;
+		state->channelstate[i].sampleoffset = ctx->offset + getle32(pcmchannel->info.sampleref.offset) + getle32(ctx->header.datablockref.offset) + 8 + startoffset;
 		stream_in_allocate(&state->channelstate[i].instreamctx, BUFFERSIZE, ctx->file);
 		stream_in_seek(&state->channelstate[i].instreamctx, state->channelstate[i].sampleoffset);
 	}

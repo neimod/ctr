@@ -24,6 +24,7 @@ typedef struct
 	unsigned int mediaunitsize;
 	int ignoreprogramid;
 	int listromfs;
+	u32 cwavloopcount;
 } settings;
 
 void settings_init(settings* usersettings);
@@ -46,6 +47,7 @@ unsigned char* settings_get_ncch_fixedsystemkey(settings* usersettings);
 unsigned char* settings_get_common_key(settings* usersettings);
 int settings_get_ignore_programid(settings* usersettings);
 int settings_get_list_romfs_files(settings* usersettings);
+int settings_get_cwav_loopcount(settings* usersettings);
 
 void settings_set_lzss_path(settings* usersettings, const char* path);
 void settings_set_exefs_path(settings* usersettings, const char* path);
@@ -63,5 +65,6 @@ void settings_set_wav_path(settings* usersettings, const char* path);
 void settings_set_mediaunit_size(settings* usersettings, unsigned int size);
 void settings_set_ignore_programid(settings* usersettings, int enable);
 void settings_set_list_romfs_files(settings* usersettings, int enable);
+void settings_set_cwav_loopcount(settings* usersettings, u32 loopcount);
 
 #endif // _SETTINGS_H_

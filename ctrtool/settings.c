@@ -161,6 +161,14 @@ int settings_get_list_romfs_files(settings* usersettings)
 		return 0;
 }
 
+int settings_get_cwav_loopcount(settings* usersettings)
+{
+	if (usersettings)
+		return usersettings->cwavloopcount;
+	else
+		return 0;
+}
+
 void settings_set_wav_path(settings* usersettings, const char* path)
 {
 	filepath_set(&usersettings->wavpath, path);
@@ -240,4 +248,9 @@ void settings_set_ignore_programid(settings* usersettings, int enable)
 void settings_set_list_romfs_files(settings* usersettings, int enable)
 {
 	usersettings->listromfs = enable;
+}
+
+void settings_set_cwav_loopcount(settings* usersettings, u32 loopcount)
+{
+	usersettings->cwavloopcount = loopcount;
 }

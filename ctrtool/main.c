@@ -76,6 +76,7 @@ static void usage(const char *argv0)
 		   "  --firmdir=dir      Specify Firm directory path.\n"
 		   "CWAV options:\n"
 		   "  --wav=file         Specify wav output file.\n"
+		   "  --wavloops=count   Specify wav loop count, default 0.\n"
 		   "ROMFS options:\n"
 		   "  --romfsdir=dir     Specify RomFS directory path.\n"
 		   "  --listromfs        List files in RomFS.\n"
@@ -138,6 +139,7 @@ int main(int argc, char* argv[])
 			{"wav", 1, NULL, 16},
 			{"romfsdir", 1, NULL, 17},
 			{"listromfs", 0, NULL, 18},
+			{"wavloops", 1, NULL, 19},
 			{NULL},
 		};
 
@@ -220,6 +222,7 @@ int main(int argc, char* argv[])
 			case 16: settings_set_wav_path(&ctx.usersettings, optarg); break;
 			case 17: settings_set_romfs_dir_path(&ctx.usersettings, optarg); break;
 			case 18: settings_set_list_romfs_files(&ctx.usersettings, 1); break;
+			case 19: settings_set_cwav_loopcount(&ctx.usersettings, strtoul(optarg, 0, 0)); break;
 
 
 			default:
