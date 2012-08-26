@@ -78,6 +78,7 @@ static void usage(const char *argv0)
 		   "  --wav=file         Specify wav output file.\n"
 		   "ROMFS options:\n"
 		   "  --romfsdir=dir     Specify RomFS directory path.\n"
+		   "  --listromfs        List files in RomFS.\n"
            "\n",
 		   argv0);
    exit(1);
@@ -136,6 +137,7 @@ int main(int argc, char* argv[])
 			{"ncchsyskey", 1, NULL, 15},
 			{"wav", 1, NULL, 16},
 			{"romfsdir", 1, NULL, 17},
+			{"listromfs", 0, NULL, 18},
 			{NULL},
 		};
 
@@ -217,6 +219,7 @@ int main(int argc, char* argv[])
 			case 15: keyset_parse_ncchfixedsystemkey(&tmpkeys, optarg, strlen(optarg)); break;
 			case 16: settings_set_wav_path(&ctx.usersettings, optarg); break;
 			case 17: settings_set_romfs_dir_path(&ctx.usersettings, optarg); break;
+			case 18: settings_set_list_romfs_files(&ctx.usersettings, 1); break;
 
 
 			default:

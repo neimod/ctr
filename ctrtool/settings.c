@@ -153,6 +153,14 @@ int settings_get_ignore_programid(settings* usersettings)
 		return 0;
 }
 
+int settings_get_list_romfs_files(settings* usersettings)
+{
+	if (usersettings)
+		return usersettings->listromfs;
+	else
+		return 0;
+}
+
 void settings_set_wav_path(settings* usersettings, const char* path)
 {
 	filepath_set(&usersettings->wavpath, path);
@@ -227,4 +235,9 @@ void settings_set_mediaunit_size(settings* usersettings, unsigned int size)
 void settings_set_ignore_programid(settings* usersettings, int enable)
 {
 	usersettings->ignoreprogramid = enable;
+}
+
+void settings_set_list_romfs_files(settings* usersettings, int enable)
+{
+	usersettings->listromfs = enable;
 }

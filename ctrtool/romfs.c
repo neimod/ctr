@@ -165,7 +165,6 @@ int romfs_fileblock_readentry(romfs_context* ctx, u32 fileoffset, romfs_fileentr
 
 void romfs_visit_dir(romfs_context* ctx, u32 diroffset, u32 depth, u32 actions, filepath* rootpath)
 {
-	u32 i;
 	u32 siblingoffset;
 	u32 childoffset;
 	u32 fileoffset;
@@ -197,6 +196,20 @@ void romfs_visit_dir(romfs_context* ctx, u32 diroffset, u32 depth, u32 actions, 
 			return;
 		}
 	}
+	else
+	{
+		filepath_init(&currentpath);
+
+		if (settings_get_list_romfs_files(ctx->usersettings))
+		{
+			u32 i;
+
+			for(i=0; i<depth; i++)
+				printf(" ");
+			fwprintf(stdout, L"%ls\n", entry->name);
+		}
+	}
+	
 
 	siblingoffset = getle32(entry->siblingoffset);
 	childoffset = getle32(entry->childoffset);
@@ -242,6 +255,18 @@ void romfs_visit_file(romfs_context* ctx, u32 fileoffset, u32 depth, u32 actions
 		{
 			fprintf(stderr, "Error creating directory in root %s\n", rootpath->pathname);
 			return;
+		}
+	}
+	else
+	{
+		filepath_init(&currentpath);
+		if (settings_get_list_romfs_files(ctx->usersettings))
+		{
+			u32 i;
+
+			for(i=0; i<depth; i++)
+				printf(" ");
+			fwprintf(stdout, L"%ls\n", entry->name);
 		}
 	}
 
