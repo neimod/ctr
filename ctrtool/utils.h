@@ -3,6 +3,11 @@
 
 #include "types.h"
 
+#ifdef _WIN32
+#define PATH_SEPERATOR '\\'
+#else
+#define PATH_SEPERATOR '/'
+#endif
 
 #ifndef MAX_PATH
 	#define MAX_PATH 255

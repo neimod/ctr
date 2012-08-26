@@ -11,6 +11,7 @@
 #define MAGIC_NCSD 0x4453434E
 #define MAGIC_FIRM 0x4D524946
 #define MAGIC_CWAV 0x56415743
+#define MAGIC_IVFC 0x43465649
 
 #define SIZE_128MB (128 * 1024 * 1024)
 
@@ -24,7 +25,8 @@ typedef enum
 	FILETYPE_TMD,
 	FILETYPE_LZSS,
 	FILETYPE_FIRM,
-	FILETYPE_CWAV
+	FILETYPE_CWAV,
+	FILETYPE_ROMFS
 } ctr_filetypes;
 
 typedef struct

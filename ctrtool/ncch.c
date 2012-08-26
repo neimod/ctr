@@ -54,7 +54,7 @@ void ncch_get_counter(ncch_context* ctx, u8 counter[16], u8 type)
 
 	memset(counter, 0, 16);
 
-	if (version == 2)
+	if (version == 2 || version == 0)
 	{
 		for(i=0; i<8; i++)
 			counter[i] = partitionid[7-i];
@@ -280,6 +280,7 @@ void ncch_process(ncch_context* ctx, u32 actions)
 {
 	u8 exheadercounter[16];
 	u8 exefscounter[16];
+	int result = 1;
 
 
 	fseek(ctx->file, ctx->offset, SEEK_SET);
@@ -332,10 +333,16 @@ void ncch_process(ncch_context* ctx, u32 actions)
 		ncch_save(ctx, NCCHTYPE_EXHEADER, actions);
 	}
 
-	if (!exheader_programid_valid(&ctx->exheader))
-		return;
 
-	if (exheader_process(&ctx->exheader, actions))
+	if (result && ncch_get_exheader_size(ctx))
+	{
+		if (!exheader_programid_valid(&ctx->exheader))
+			return;
+
+		result = exheader_process(&ctx->exheader, actions);
+	} 
+
+	if (result && ncch_get_exheader_size(ctx))
 	{
 		exefs_set_compressedflag(&ctx->exefs, exheader_get_compressedflag(&ctx->exheader));
 		exefs_process(&ctx->exefs, actions);
@@ -394,7 +401,7 @@ u32 ncch_get_mediaunit_size(ncch_context* ctx)
 		unsigned short version = getle16(ctx->header.version);
 		if (version == 1)
 			mediaunitsize = 1;
-		else if (version == 2)
+		else if (version == 2 || version == 0)
 			mediaunitsize = 1 << (ctx->header.flags[6] + 9);
 	}
 

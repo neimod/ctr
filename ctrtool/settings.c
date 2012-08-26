@@ -55,6 +55,14 @@ filepath* settings_get_exefs_dir_path(settings* usersettings)
 		return 0;
 }
 
+filepath* settings_get_romfs_dir_path(settings* usersettings)
+{
+	if (usersettings)
+		return &usersettings->romfsdirpath;
+	else
+		return 0;
+}
+
 filepath* settings_get_firm_dir_path(settings* usersettings)
 {
 	if (usersettings)
@@ -204,6 +212,11 @@ void settings_set_content_path(settings* usersettings, const char* path)
 void settings_set_exefs_dir_path(settings* usersettings, const char* path)
 {
 	filepath_set(&usersettings->exefsdirpath, path);
+}
+
+void settings_set_romfs_dir_path(settings* usersettings, const char* path)
+{
+	filepath_set(&usersettings->romfsdirpath, path);
 }
 
 void settings_set_mediaunit_size(settings* usersettings, unsigned int size)

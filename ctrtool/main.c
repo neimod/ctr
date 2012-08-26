@@ -16,6 +16,7 @@
 #include "settings.h"
 #include "firm.h"
 #include "cwav.h"
+#include "romfs.h"
 
 enum cryptotype
 {
@@ -56,7 +57,7 @@ static void usage(const char *argv0)
 		   "  --ncchsyskey=key   Set ncch fixed system key.\n"
 		   "  --showkeys         Show the keys being used.\n"
 		   "  -t, --intype=type	 Specify input file type [ncsd, ncch, exheader, cia, tmd, lzss,\n"
-		   "                        firm, cwav]\n"
+		   "                        firm, cwav, romfs]\n"
 		   "LZSS options:\n"
 		   "  --lzssout=file	 Specify lzss output file\n"
 		   "CXI/CCI options:\n"
@@ -75,6 +76,8 @@ static void usage(const char *argv0)
 		   "  --firmdir=dir      Specify Firm directory path.\n"
 		   "CWAV options:\n"
 		   "  --wav=file         Specify wav output file.\n"
+		   "ROMFS options:\n"
+		   "  --romfsdir=dir     Specify RomFS directory path.\n"
            "\n",
 		   argv0);
    exit(1);
@@ -132,6 +135,7 @@ int main(int argc, char* argv[])
 			{"firmdir", 1, NULL, 14},
 			{"ncchsyskey", 1, NULL, 15},
 			{"wav", 1, NULL, 16},
+			{"romfsdir", 1, NULL, 17},
 			{NULL},
 		};
 
@@ -191,6 +195,8 @@ int main(int argc, char* argv[])
 					ctx.filetype = FILETYPE_FIRM;
 				else if (!strcmp(optarg, "cwav"))
 					ctx.filetype = FILETYPE_CWAV;
+				else if (!strcmp(optarg, "romfs"))
+					ctx.filetype = FILETYPE_ROMFS;
 			break;
 
 			case 0: settings_set_exefs_path(&ctx.usersettings, optarg); break;
@@ -210,6 +216,7 @@ int main(int argc, char* argv[])
 			case 14: settings_set_firm_dir_path(&ctx.usersettings, optarg); break;
 			case 15: keyset_parse_ncchfixedsystemkey(&tmpkeys, optarg, strlen(optarg)); break;
 			case 16: settings_set_wav_path(&ctx.usersettings, optarg); break;
+			case 17: settings_set_romfs_dir_path(&ctx.usersettings, optarg); break;
 
 
 			default:
@@ -285,6 +292,10 @@ int main(int argc, char* argv[])
 
 			case MAGIC_CWAV:
 				ctx.filetype = FILETYPE_CWAV;
+			break;
+
+			case MAGIC_IVFC:
+				ctx.filetype = FILETYPE_ROMFS; // TODO: need to determine more here.. savegames use IVFC too, but is not ROMFS.
 			break;
 		}
 	}
@@ -402,6 +413,19 @@ int main(int argc, char* argv[])
 			cwav_set_size(&cwavctx, ctx.infilesize);
 			cwav_set_usersettings(&cwavctx, &ctx.usersettings);
 			cwav_process(&cwavctx, ctx.actions);
+	
+			break;
+		}
+
+		case FILETYPE_ROMFS:
+		{
+			romfs_context romfsctx;
+
+			romfs_init(&romfsctx);
+			romfs_set_file(&romfsctx, ctx.infile);
+			romfs_set_size(&romfsctx, ctx.infilesize);
+			romfs_set_usersettings(&romfsctx, &ctx.usersettings);
+			romfs_process(&romfsctx, ctx.actions);
 	
 			break;
 		}

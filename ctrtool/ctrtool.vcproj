@@ -231,6 +231,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\romfs.c"
+				>
+			</File>
+			<File
 				RelativePath=".\settings.c"
 				>
 			</File>
@@ -346,6 +350,10 @@
 			</File>
 			<File
 				RelativePath=".\ncsd.h"
+				>
+			</File>
+			<File
+				RelativePath=".\romfs.h"
 				>
 			</File>
 			<File
