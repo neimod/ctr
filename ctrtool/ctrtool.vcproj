@@ -136,6 +136,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
+				OutputFile="c:\dev\tools\bin\ctrtool.exe"
 				LinkIncremental="1"
 				GenerateDebugInformation="true"
 				SubSystem="1"
@@ -208,6 +209,10 @@
 			</File>
 			<File
 				RelativePath=".\windows\getopt1.c"
+				>
+			</File>
+			<File
+				RelativePath=".\ivfc.c"
 				>
 			</File>
 			<File
@@ -334,6 +339,10 @@
 			</File>
 			<File
 				RelativePath=".\info.h"
+				>
+			</File>
+			<File
+				RelativePath=".\ivfc.h"
 				>
 			</File>
 			<File

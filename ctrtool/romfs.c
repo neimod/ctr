@@ -10,6 +10,7 @@
 void romfs_init(romfs_context* ctx)
 {
 	memset(ctx, 0, sizeof(romfs_context));
+	ivfc_init(&ctx->ivfc);
 }
 
 void romfs_set_file(romfs_context* ctx, FILE* file)
@@ -41,6 +42,12 @@ void romfs_process(romfs_context* ctx, u32 actions)
 	u32 fileblockoffset = 0;
 	u32 fileblocksize = 0;
 
+
+	ivfc_set_offset(&ctx->ivfc, ctx->offset);
+	ivfc_set_size(&ctx->ivfc, ctx->size);
+	ivfc_set_file(&ctx->ivfc, ctx->file);
+	ivfc_set_usersettings(&ctx->ivfc, ctx->usersettings);
+	ivfc_process(&ctx->ivfc, actions);
 
 	fseek(ctx->file, ctx->offset, SEEK_SET);
 	fread(&ctx->header, 1, sizeof(romfs_header), ctx->file);
@@ -331,7 +338,6 @@ clean:
 void romfs_print(romfs_context* ctx)
 {
 	u32 i;
-
 
 	fprintf(stdout, "\nRomFS:\n");
 

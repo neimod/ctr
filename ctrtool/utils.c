@@ -18,6 +18,13 @@ u32 align(u32 offset, u32 alignment)
 	return (offset + (alignment-1)) & mask;
 }
 
+u64 align64(u64 offset, u32 alignment)
+{
+	u64 mask = ~(alignment-1);
+
+	return (offset + (alignment-1)) & mask;
+}
+
 u64 getle64(const u8* p)
 {
 	u64 n = p[0];

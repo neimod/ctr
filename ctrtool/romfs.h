@@ -6,6 +6,7 @@
 #include "ctr.h"
 #include "filepath.h"
 #include "settings.h"
+#include "ivfc.h"
 
 #define ROMFS_MAXNAMESIZE	254		// limit set by ctrtool
 
@@ -67,6 +68,7 @@ typedef struct
 	u32 infoblockoffset;
 	romfs_direntry direntry;
 	romfs_fileentry fileentry;
+	ivfc_context ivfc;
 } romfs_context;
 
 void romfs_init(romfs_context* ctx);
