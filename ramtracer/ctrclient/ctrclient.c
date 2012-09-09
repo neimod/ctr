@@ -195,7 +195,8 @@ int ctrclient_sendlong(ctrclient* client, unsigned int value)
 	return ctrclient_sendbuffer(client, buffer, 4);
 }
 
-int ctrclient_aes_ctr_crypt(ctrclient* client, unsigned char* buffer, unsigned int size)
+
+static int ctrclient_aes_crypto(ctrclient* client, unsigned char* buffer, unsigned int size, unsigned int command)
 {
 	unsigned char header[8];
 
@@ -205,7 +206,7 @@ int ctrclient_aes_ctr_crypt(ctrclient* client, unsigned char* buffer, unsigned i
 		if (maxsize > size)
 			maxsize = size;
 
-		if (!ctrclient_sendlong(client, 0x80))
+		if (!ctrclient_sendlong(client, command))
 			return 0;
 		if (!ctrclient_sendlong(client, maxsize))
 			return 0;
@@ -223,6 +224,22 @@ int ctrclient_aes_ctr_crypt(ctrclient* client, unsigned char* buffer, unsigned i
 	return 1;
 }
 
+int ctrclient_aes_ctr_crypt(ctrclient* client, unsigned char* buffer, unsigned int size)
+{
+	return ctrclient_aes_crypto(client, buffer, size, CMD_AESCTR);
+}
+
+int ctrclient_aes_cbc_decrypt(ctrclient* client, unsigned char* buffer, unsigned int size)
+{
+	return ctrclient_aes_crypto(client, buffer, size, CMD_AESCBCDEC);
+}
+
+int ctrclient_aes_cbc_encrypt(ctrclient* client, unsigned char* buffer, unsigned int size)
+{
+	return ctrclient_aes_crypto(client, buffer, size, CMD_AESCBCENC);
+}
+
+
 int ctrclient_aes_control(ctrclient* client, aescontrol* control)
 {
 	unsigned char header[8];
@@ -231,7 +248,7 @@ int ctrclient_aes_control(ctrclient* client, aescontrol* control)
 	if (size != 40)
 		return 0;
 
-	if (!ctrclient_sendlong(client, 0x81))
+	if (!ctrclient_sendlong(client, CMD_AESCONTROL))
 		return 0;
 	if (!ctrclient_sendlong(client, size))
 		return 0;

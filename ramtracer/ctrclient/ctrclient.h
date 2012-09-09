@@ -1,6 +1,12 @@
 #ifndef __CTRCLIENT_H__
 #define __CTRCLIENT_H__
 
+#define CMD_AESCTR			0x80
+#define CMD_AESCONTROL		0x81
+#define CMD_AESCBCDEC		0x82
+#define CMD_AESCBCENC		0x83
+
+
 #define AES_FLAGS_SET_IV		1
 #define AES_FLAGS_SET_KEY		2
 #define AES_FLAGS_SET_YKEY		4
@@ -23,6 +29,7 @@ typedef struct
 
 // Maximum size per message
 #define CHUNKMAXSIZE		0xFFF000
+//#define CHUNKMAXSIZE		0x10
 
 void ctrclient_init();
 void ctrclient_disconnect(ctrclient* client);
@@ -31,6 +38,8 @@ int ctrclient_sendbuffer(ctrclient* client, const void* buffer, unsigned int siz
 int ctrclient_recvbuffer(ctrclient* client, void* buffer, unsigned int size);
 int ctrclient_sendlong(ctrclient* client, unsigned int value);
 int ctrclient_aes_ctr_crypt(ctrclient* client, unsigned char* buffer, unsigned int size);
+int ctrclient_aes_cbc_decrypt(ctrclient* client, unsigned char* buffer, unsigned int size);
+int ctrclient_aes_cbc_encrypt(ctrclient* client, unsigned char* buffer, unsigned int size);
 int ctrclient_aes_set_key(ctrclient* client, unsigned int keyslot, unsigned char key[16]);
 int ctrclient_aes_set_ykey(ctrclient* client, unsigned int keyslot, unsigned char key[16]);
 int ctrclient_aes_select_key(ctrclient* client, unsigned int keyslot);
