@@ -39,7 +39,7 @@ typedef struct
 } aesccmheader;
 
 // Maximum size per message
-#define CHUNKMAXSIZE		0x4FF000
+#define CHUNKMAXSIZE		0x3FF000
 //#define CHUNKMAXSIZE		0x10
 
 void ctrclient_init();
