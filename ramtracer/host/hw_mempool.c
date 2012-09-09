@@ -1,8 +1,6 @@
 /*
- * hw_main.h -  Main functionality for talking to the 3DS RAM
- *               tracing/injecting hardware over USB.
+ * hw_mempool.h - Memory pool.
  *
- * Copyright (C) 2009 Micah Dowty
  * Copyright (C) 2012 neimod
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -24,22 +22,53 @@
  * THE SOFTWARE.
  */
 
-#ifndef __HW_COMMON_H_
-#define __HW_COMMON_H_
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "hw_mempool.h"
 
-#include "fastftdi.h"
+	
+	
+void* HW_MemoryPoolAlloc(HWMemoryPool* pool, unsigned int size)
+{
+	unsigned int available = pool->capacity - pool->size;
+	void* result = 0;
+	
+	size = (size + 8) & ~8;
+	
+	if (available < size)
+	{
+		fprintf(stderr, "error allocating memory from pool\n");
+		return 0;
+	}
+
+	result = (void*)&pool->data[pool->size];
+	
+	pool->size += size;
+	return result;
+}
+
+void HW_MemoryPoolFree(HWMemoryPool* pool, void* ptr)
+{
+}
 
 
-/*
- * Public
- */
+void HW_MemoryPoolInit(HWMemoryPool* pool, unsigned int capacity)
+{
+	pool->data = (unsigned char*)malloc(capacity);
+	pool->capacity = capacity;
+	pool->size = 0;
+}
 
-void HW_Init();
-void HW_LoadPatchFile(const char* filename);
-void HW_Patch(FTDIDevice *dev, const char *filename);
-void HW_LoadFlatPatchFile(unsigned int address, const char* filename);
-void HW_Setup(FTDIDevice *dev, const char *bitstream);
-void HW_Trace(FTDIDevice *dev, const char *filename);
-void HW_RequestExit();
+void HW_MemoryPoolClear(HWMemoryPool* pool)
+{
+	pool->size = 0;
+}
 
-#endif // __HW_COMMON_H_
+
+void HW_MemoryPoolDestroy(HWMemoryPool* pool)
+{
+	free(pool->data);
+	pool->size = 0;
+	pool->capacity = 0;
+}

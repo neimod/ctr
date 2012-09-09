@@ -30,6 +30,7 @@
 #include "hw_config.h"
 
 #define HWCAMENTRYCOUNT 32
+//#define HWCAMENTRYCOUNT 16
 #define	HWPATCHDATASIZE (16 * 1024)
 
 /*

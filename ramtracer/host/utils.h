@@ -25,6 +25,9 @@
 #ifndef __UTILS_H_
 #define __UTILS_H_
 
+#include <stdio.h>
+#include <string.h>
+
 #ifdef _WIN32
 	struct timezone
 	{
@@ -45,5 +48,6 @@ unsigned int buffer_readle32(unsigned char* buffer, unsigned int* bufferpos, uns
 unsigned int buffer_readle16(unsigned char* buffer, unsigned int* bufferpos, unsigned int buffersize);
 unsigned int buffer_readbyte(unsigned char* buffer, unsigned int* bufferpos, unsigned int buffersize);
 unsigned char* buffer_readdata(unsigned char* buffer, unsigned int* bufferpos, unsigned int buffersize, unsigned int datasize);
-
+void memdump(FILE* fout, const char* prefix, const unsigned char* data, unsigned int size);
+void hexdump(const void *ptr, int buflen);
 #endif // __UTILS_H_

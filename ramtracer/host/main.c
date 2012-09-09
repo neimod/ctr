@@ -49,17 +49,16 @@ static void usage(const char *argv0)
    exit(1);
 }
 
-
 int main(int argc, char **argv)
 {
    const char *bitstream = NULL;
    const char *tracefile = NULL;
    FTDIDevice dev;
    int err, c;
-	
    HW_Init();
-	
-	//changeterminal(1);
+   
+
+   changeterminal(1);
 
    while (1) 
    {
@@ -69,16 +68,20 @@ int main(int argc, char **argv)
 	  {
          {"bitstream", 1, NULL, 'b'},
          {"patch", 1, NULL, 'p'},
-         {"flatpatch", 1, NULL, 'l'},		  
+         {"flatpatch", 1, NULL, 'l'},
+		 {"server", 0, NULL, 's'},
          {NULL},
       };
 
-      c = getopt_long(argc, argv, "b:p:l:", long_options, &option_index);
+      c = getopt_long(argc, argv, "sb:p:l:", long_options, &option_index);
       if (c == -1)
          break;
 
       switch (c) 
 	  {
+	  case 's':
+		 ServerSetEnabled(1);
+		 break;
       case 'b':
          bitstream = strdup(optarg);
          break;
@@ -124,8 +127,7 @@ int main(int argc, char **argv)
 
    FTDIDevice_Close(&dev);
    
-   //changeterminal(0);
-
-   return 0;
+   changeterminal(0);
 }
+
 

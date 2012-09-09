@@ -1,5 +1,5 @@
 /*
- * hw_process.h - Processing of RAM tracing data.
+ * server.h - Server functionality.
  *
  * Copyright (C) 2012 neimod
  *
@@ -22,50 +22,53 @@
  * THE SOFTWARE.
  */
 
-#ifndef __HW_PROCESS_H_
-#define __HW_PROCESS_H_
+#ifndef __SERVER_H_
+#define __SERVER_H_
 
 #include <stdio.h>
 #include <pthread.h>
+#include <arpa/inet.h>
 #include "hw_buffer.h"
 #include "hw_command.h"
-#include "server.h"
-#include "fastftdi.h"
+
+#define SERVER_MIN_CMD_ID	0x80
+#define SERVER_MAX_BUFFERSIZE 		(1024 * 1024)
+#define SERVER_MAX_CHALLENGESIZE	0x100
+
 /*
- * HWCapture -- Worker structure for a seperately running thread that does heavy processing
- *              on real-time captured RAM tracing data, such as compression and saving to disk. 
+ * Server -- Worker structure for the server.
  */
 
-#define MAXFILES 16
 
 typedef struct
 {
-   FILE* file;
-   int used;
-} filenode;
-
-typedef struct
-{
-   unsigned int writefifocapacity;
-   HWBuffer config;   
-   HWBuffer writefifo;
-   HWBuffer readfifo;   
-   HWBuffer databuffer;
-   FTDIDevice* dev;
-   int enabled;
-   unsigned char fifoincoming[8];
-   filenode filemap[MAXFILES];
-   HWCommand command;
-   Server server;
-} HWProcess;
+	unsigned int running;
+   unsigned int done;
+	pthread_t listenthread;
+	pthread_t receivethread;
+	pthread_mutex_t mutex;
+	struct sockaddr_storage remoteaddr;
+	int remoteaddrlen;
+	int remotesockfd;
+	int remoteflush;
+	char remoteIP[INET6_ADDRSTRLEN];
+	
+	unsigned int authsize;
+	unsigned char auth[SERVER_MAX_CHALLENGESIZE];
+	int shutdownpipe[2];
+	pthread_mutex_t receivemutex;
+	HWBuffer receivebuffer;
+} Server;
 
 /*
  * Public functions
  */
-void HW_ProcessInit(HWProcess* process, FTDIDevice* dev, int enabled);
-void HW_ProcessDestroy(HWProcess* process);
-void HW_Process(HWProcess* process, unsigned char* buffer, unsigned int buffersize);
-int HW_ProcessSample(HWProcess* process, uint8_t* sampledata);
-int HW_ProcessBlock(HWProcess* process, uint8_t *buffer, int length);
+int  ServerIsEnabled();
+void ServerSetEnabled(int enabled);
+void ServerBegin(Server* server);
+void ServerFinish(Server* server);
+unsigned int ServerRead(Server* server, HWBuffer* buffer);
+void ServerWriteBuffer(Server* server, unsigned char* buffer, unsigned int buffersize);
+void ServerWrite(Server* server, unsigned int command, unsigned char* buffer, unsigned int buffersize);
 
-#endif // __HW_PROCESS_H_
+#endif // __SERVER_H_

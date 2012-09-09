@@ -1,5 +1,5 @@
 /*
- * hw_process.h - Processing of RAM tracing data.
+ * hw_mempool.h - Memory pool.
  *
  * Copyright (C) 2012 neimod
  *
@@ -22,50 +22,32 @@
  * THE SOFTWARE.
  */
 
-#ifndef __HW_PROCESS_H_
-#define __HW_PROCESS_H_
+#ifndef __HW_MEMPOOL_H_
+#define __HW_MEMPOOL_H_
 
 #include <stdio.h>
-#include <pthread.h>
 #include "hw_buffer.h"
-#include "hw_command.h"
-#include "server.h"
-#include "fastftdi.h"
+
 /*
- * HWCapture -- Worker structure for a seperately running thread that does heavy processing
- *              on real-time captured RAM tracing data, such as compression and saving to disk. 
+ * HWMemoryPool -- The memory pool structure.
  */
 
-#define MAXFILES 16
 
 typedef struct
 {
-   FILE* file;
-   int used;
-} filenode;
-
-typedef struct
-{
-   unsigned int writefifocapacity;
-   HWBuffer config;   
-   HWBuffer writefifo;
-   HWBuffer readfifo;   
-   HWBuffer databuffer;
-   FTDIDevice* dev;
-   int enabled;
-   unsigned char fifoincoming[8];
-   filenode filemap[MAXFILES];
-   HWCommand command;
-   Server server;
-} HWProcess;
+	unsigned char* data;
+	unsigned int capacity;
+	unsigned int size;
+} HWMemoryPool;
 
 /*
  * Public functions
  */
-void HW_ProcessInit(HWProcess* process, FTDIDevice* dev, int enabled);
-void HW_ProcessDestroy(HWProcess* process);
-void HW_Process(HWProcess* process, unsigned char* buffer, unsigned int buffersize);
-int HW_ProcessSample(HWProcess* process, uint8_t* sampledata);
-int HW_ProcessBlock(HWProcess* process, uint8_t *buffer, int length);
+void* HW_MemoryPoolAlloc(HWMemoryPool* pool, unsigned int size);
+void HW_MemoryPoolFree(HWMemoryPool* pool, void* ptr);
+void HW_MemoryPoolDestroy(HWMemoryPool* pool);
+void HW_MemoryPoolInit(HWMemoryPool* pool, unsigned int capacity);
+void HW_MemoryPoolClear(HWMemoryPool* pool);
 
-#endif // __HW_PROCESS_H_
+
+#endif // __HW_MEMPOOL_H_
