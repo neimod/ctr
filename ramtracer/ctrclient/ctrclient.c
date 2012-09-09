@@ -224,6 +224,77 @@ static int ctrclient_aes_crypto(ctrclient* client, unsigned char* buffer, unsign
 	return 1;
 }
 
+static int ctrclient_aes_ccm_crypto(ctrclient* client, unsigned int maclen, unsigned char* mac, unsigned char* assocbuffer, unsigned int assocsize, unsigned char* payloadbuffer, unsigned int payloadsize, unsigned int command)
+{
+	unsigned char header[8];
+	aesccmheader ccmheader;
+	unsigned int assocblockcount = assocsize / 16;
+	unsigned int payloadblockcount = payloadsize / 16;
+	unsigned char macresult[16];
+
+	maclen = (maclen-2)/2;
+
+	if (assocblockcount > 0xFFFF)
+		return 0;
+	if (assocblockcount*16 != assocsize)
+		return 0;
+	if (payloadblockcount > 0xFFFF)
+		return 0;
+	if (payloadblockcount*16 != payloadsize)
+		return 0;
+
+	memset(&ccmheader, 0, sizeof(aesccmheader));
+	putle32(ccmheader.assocblockcount, assocblockcount);
+	putle32(ccmheader.payloadblockcount, payloadblockcount);
+	putle32(ccmheader.maclen, maclen);
+	if (command == CMD_AESCCMDEC)
+		memcpy(ccmheader.mac, mac, 0x10);
+
+
+	if (!ctrclient_sendlong(client, command))
+		return 0;
+	if (!ctrclient_sendlong(client, payloadsize + assocsize + sizeof(aesccmheader)))
+		return 0;
+	if (!ctrclient_sendbuffer(client, &ccmheader, sizeof(aesccmheader)))
+		return 0;
+	if (assocsize)
+	{
+		if (!ctrclient_sendbuffer(client, assocbuffer, assocsize))
+			return 0;
+	}
+	if (!ctrclient_sendbuffer(client, payloadbuffer, payloadsize))
+		return 0;
+	if (!ctrclient_recvbuffer(client, header, 8))
+		return 0;
+	if (!ctrclient_recvbuffer(client, payloadbuffer, payloadsize))
+		return 0;
+	if (!ctrclient_recvbuffer(client, macresult, 16))
+		return 0;
+
+	if (command == CMD_AESCCMENC)
+	{
+		if (mac)
+			memcpy(mac, macresult, 16);
+	}
+	else if (macresult[0] != 1)
+	{
+		return 2;
+	}
+
+	return 1;
+}
+
+int ctrclient_aes_ccm_encrypt(ctrclient* client, unsigned char* buffer, unsigned int size, unsigned char mac[16])
+{
+	return ctrclient_aes_ccm_crypto(client, 16, mac, 0, 0, buffer, size, CMD_AESCCMENC);
+}
+
+int ctrclient_aes_ccm_decrypt(ctrclient* client, unsigned char* buffer, unsigned int size, unsigned char mac[16])
+{
+	return ctrclient_aes_ccm_crypto(client, 16, mac, 0, 0, buffer, size, CMD_AESCCMDEC);
+}
+
+
 int ctrclient_aes_ctr_crypt(ctrclient* client, unsigned char* buffer, unsigned int size)
 {
 	return ctrclient_aes_crypto(client, buffer, size, CMD_AESCTR);
@@ -310,4 +381,15 @@ int ctrclient_aes_set_iv(ctrclient* client, unsigned char iv[16])
 int ctrclient_aes_set_ctr(ctrclient* client, unsigned char ctr[16])
 {
 	return ctrclient_aes_set_iv(client, ctr);
+}
+
+int ctrclient_aes_set_nonce(ctrclient* client, unsigned char nonce[12])
+{
+	aescontrol control;
+
+	memset(&control, 0, sizeof(aescontrol));
+	putle32(control.flags, AES_FLAGS_SET_IV | AES_FLAGS_SET_NONCE);
+	memcpy(control.iv, nonce, 12);
+
+	return ctrclient_aes_control(client, &control);
 }
