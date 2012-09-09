@@ -31,8 +31,8 @@
 #include "hw_config.h"
 #include "utils.h"
 #include "hw_process.h"
-
-
+#include "hw_command.h"
+#include "server.h"
 
 static void fix_data_order(unsigned int *mask, unsigned char *data)
 {
@@ -69,19 +69,33 @@ void HW_ProcessInit(HWProcess* process, FTDIDevice* dev, int enabled)
    HW_BufferInit(&process->writefifo, 16);
    HW_BufferInit(&process->readfifo, 16);
    HW_BufferInit(&process->databuffer, 16);   
-   HW_ConfigInit(&process->config);   
+   HW_ConfigInit(&process->config);  
+
+   HW_CommandInit(&process->command, enabled);
+   
+   if (ServerIsEnabled())
+      ServerBegin(&process->server);
 }
 
 
 void HW_ProcessDestroy(HWProcess* process) 
 {
+   if (ServerIsEnabled())
+      ServerFinish(&process->server);
+
+   HW_CommandDestroy(&process->command);
+
    HW_BufferDestroy(&process->writefifo);
    HW_BufferDestroy(&process->config);
 }
 
+int verboseprocessing = 0;
 void HW_ProcessServicePrint(HWProcess* process, unsigned int command, unsigned char* buffer, unsigned int buffersize)
 {
    unsigned int i;
+   
+   if (buffer[0] == '>' && buffer[1] == ' ' && buffer[2] == 'E')
+	verboseprocessing = 1;
    
    for(i=0; i<buffersize; i++)
       printf("%c", buffer[i]);
@@ -94,7 +108,7 @@ void HW_ProcessServiceFopen(HWProcess* process, unsigned int command, unsigned c
    unsigned int index = ~0;
    unsigned int i;
       
-   printf("Fopen\n");
+   printf("@");
    if (buffersize >= 256)
    {
       printf("ERROR fopen: fname size too big\n");
@@ -117,9 +131,15 @@ void HW_ProcessServiceFopen(HWProcess* process, unsigned int command, unsigned c
    memcpy(fname, buffer, buffersize);
    f = fopen(fname, (command==0x02)?"rb":"wb");
 
+   if (f == 0)
+   {
+      printf("ERROR fopen: could not open file\n");
+	  return;
+   }
+   
    process->filemap[index].used = 1;
    process->filemap[index].file = f;
-   
+     
    HW_BufferAppend(&process->writefifo, &index, 4);
 }
 
@@ -130,14 +150,19 @@ void HW_ProcessServiceFwrite(HWProcess* process, unsigned int command, unsigned 
    unsigned int datasize;
    int res;
       
-   printf("Fwrite\n");
+   printf(".");
    if (buffersize < 4)
    {
       printf("ERROR fwrite: no file id\n");
       return;
    }
    
-   fileid = buffer_readle32(buffer, &bufferpos, buffersize);
+   fileid = buffer_readle32(buffer, &bufferpos, buffersize);   
+   if (process->filemap[fileid].used == 0)
+   {
+      printf("ERROR fwrite: invalid file id\n");
+	  return;
+   }
       
    datasize = buffersize - bufferpos;
    res = fwrite(buffer_readdata(buffer, &bufferpos, buffersize, datasize), datasize, 1, process->filemap[fileid].file);
@@ -154,14 +179,24 @@ void HW_ProcessServiceFread(HWProcess* process, unsigned int command, unsigned c
    unsigned int bufferpos = 0;
    unsigned int datasize;
    int readsize;
+   int readsizealigned;
+   int readsizerest;
+   unsigned char dummybuffer[4] = {0, 0, 0, 0};
    
+   printf("*");
    if (buffersize < 8)
    {
-      printf("ERROR fwrite: no file id or size\n");
+      printf("ERROR fread: no file id or size\n");
       return;
    }
    
    fileid = buffer_readle32(buffer, &bufferpos, buffersize);
+   if (process->filemap[fileid].used == 0)
+   {
+      printf("ERROR fread: invalid file id\n");
+	  return;
+   }
+
    datasize = buffer_readle32(buffer, &bufferpos, buffersize);
    
    HW_BufferClear(&process->databuffer);
@@ -176,6 +211,10 @@ void HW_ProcessServiceFread(HWProcess* process, unsigned int command, unsigned c
 
    HW_BufferAppend(&process->writefifo, &readsize, 4);
    HW_BufferAppend(&process->writefifo, process->databuffer.buffer, readsize);
+   
+   readsizealigned = (readsize+3) & (~3);
+   if (readsizealigned != readsize)
+      HW_BufferAppend(&process->writefifo, dummybuffer, readsizealigned-readsize);
    HW_BufferClear(&process->databuffer);
 }
 
@@ -184,7 +223,7 @@ void HW_ProcessServiceFclose(HWProcess* process, unsigned int command, unsigned 
    unsigned int fileid = 0;
    unsigned int bufferpos = 0;
    
-   printf("Fclose\n");
+   printf("#");
    if (buffersize < 4)
    {
       printf("ERROR fclose: no file id\n");
@@ -192,10 +231,94 @@ void HW_ProcessServiceFclose(HWProcess* process, unsigned int command, unsigned 
    }
    
    fileid = buffer_readle32(buffer, &bufferpos, buffersize);
+   if (process->filemap[fileid].used == 0)
+   {
+      printf("ERROR fclose: invalid file id\n");
+	  return;
+   }
    
    fclose(process->filemap[fileid].file);
    process->filemap[fileid].file = 0;
    process->filemap[fileid].used = 0;
+}
+
+void HW_ProcessServiceFseek(HWProcess* process, unsigned int command, unsigned char* buffer, unsigned int buffersize)
+{
+   unsigned int fileid = 0;
+   unsigned int offset = 0;
+   unsigned int bufferpos = 0;
+   
+   printf(":");
+   if (buffersize < 8)
+   {
+      printf("ERROR fseek: no file id or offset\n");
+      return;
+   }
+   
+   fileid = buffer_readle32(buffer, &bufferpos, buffersize);
+   offset = buffer_readle32(buffer, &bufferpos, buffersize);
+   if (process->filemap[fileid].used == 0)
+   {
+      printf("ERROR fseek: invalid file id\n");
+	  return;
+   }
+   
+   fseek(process->filemap[fileid].file, offset, SEEK_SET);
+}
+
+void HW_ProcessServiceFcopy(HWProcess* process, unsigned int command, unsigned char* buffer, unsigned int buffersize)
+{
+   unsigned int fileiddst = 0;
+   unsigned int fileidsrc = 0;
+   unsigned int bufferpos = 0;
+   unsigned char copybuffer[4096];
+   unsigned int copysize;
+   unsigned int maxsize;
+   FILE* fdst;
+   FILE* fsrc;
+   
+   printf("+");
+   if (buffersize < 8)
+   {
+      printf("ERROR fseek: no src or dst file id\n");
+      return;
+   }
+   
+   fileiddst = buffer_readle32(buffer, &bufferpos, buffersize);
+   fileidsrc = buffer_readle32(buffer, &bufferpos, buffersize);
+   if (process->filemap[fileiddst].used == 0)
+   {
+      printf("ERROR fseek: invalid dst file id\n");
+	  return;
+   }
+
+   if (process->filemap[fileidsrc].used == 0)
+   {
+      printf("ERROR fseek: invalid src file id\n");
+	  return;
+   }
+   
+   fsrc = process->filemap[fileidsrc].file;
+   fdst = process->filemap[fileiddst].file;
+   
+   fseek(fsrc, 0, SEEK_END);
+   copysize = ftell(fsrc);
+   fseek(fsrc, 0, SEEK_SET);
+   fseek(fdst, 0, SEEK_SET);
+   
+   while(copysize)
+   {
+      maxsize = sizeof(copybuffer);
+	  if (maxsize > copysize)
+	    maxsize = copysize;
+		
+	  fread(copybuffer, 1, maxsize, fsrc);
+	  fwrite(copybuffer, 1, maxsize, fdst);
+	  copysize -= maxsize;
+   }
+   
+   fseek(fsrc, 0, SEEK_SET);
+   fseek(fdst, 0, SEEK_SET);   
 }
 
 void HW_ProcessServiceFsize(HWProcess* process, unsigned int command, unsigned char* buffer, unsigned int buffersize)
@@ -205,7 +328,7 @@ void HW_ProcessServiceFsize(HWProcess* process, unsigned int command, unsigned c
    FILE* file = 0;
    unsigned int filesize = 0;
    
-   printf("Fsize\n");
+   printf("$");
    if (buffersize < 4)
    {
       printf("ERROR fsize: no file id\n");
@@ -213,6 +336,11 @@ void HW_ProcessServiceFsize(HWProcess* process, unsigned int command, unsigned c
    }
    
    fileid = buffer_readle32(buffer, &bufferpos, buffersize);
+   if (process->filemap[fileid].used == 0)
+   {
+      printf("ERROR fsize: invalid file id\n");
+	  return;
+   }
    
    file = process->filemap[fileid].file;
    fseek(file, 0, SEEK_END);
@@ -220,6 +348,36 @@ void HW_ProcessServiceFsize(HWProcess* process, unsigned int command, unsigned c
    fseek(file, 0, SEEK_SET);
    
    HW_BufferAppend(&process->writefifo, &filesize, 4);
+}
+
+void HW_ProcessServiceCommandRequest(HWProcess* process, unsigned int command, unsigned char* buffer, unsigned int buffersize)
+{
+   unsigned char idle[8] = { CMD_IDLE, 0, 0, 0, 0, 0, 0, 0};
+   
+   if (0 == HW_CommandRead(&process->command, &process->writefifo))
+   {
+      // No command in queue, so try the server
+      if (0 == ServerRead(&process->server, &process->writefifo))
+	  {	  
+		  // No commands in queue or server, so send the idle command
+		  HW_BufferAppend(&process->writefifo, idle, 8);
+	  }
+   }
+}
+
+
+
+void HW_ProcessServiceCommandResponse(HWProcess* process, unsigned int command, unsigned char* buffer, unsigned int buffersize)
+{
+   if (buffersize >= 4)
+   {
+      command = (buffer[0]<<0) | (buffer[1]<<8) | (buffer[2]<<16) | (buffer[3]<<24);
+	  
+	  if (command >= SERVER_MIN_CMD_ID)
+	    ServerWrite(&process->server, command, buffer+4, buffersize-4);
+	  else
+		HW_CommandProcessResponse(&process->command, command, buffer+4, buffersize-4);
+   }
 }
 
 
@@ -259,8 +417,16 @@ void HW_Process(HWProcess* process, unsigned char* buffer, unsigned int buffersi
             else if (command == 0x06)
                HW_ProcessServiceFclose(process, command, readfifobuffer+readfifopos, commandsize);           
             else if (command == 0x07)
-               HW_ProcessServiceFsize(process, command, readfifobuffer+readfifopos, commandsize);           
-            
+               HW_ProcessServiceFsize(process, command, readfifobuffer+readfifopos, commandsize);
+            else if (command == 0x08)
+               HW_ProcessServiceCommandRequest(process, command, readfifobuffer+readfifopos, commandsize);
+            else if (command == 0x09)
+               HW_ProcessServiceCommandResponse(process, command, readfifobuffer+readfifopos, commandsize);
+            else if (command == 0x0A)
+               HW_ProcessServiceFseek(process, command, readfifobuffer+readfifopos, commandsize);
+            else if (command == 0x0B)
+               HW_ProcessServiceFcopy(process, command, readfifobuffer+readfifopos, commandsize);
+			   
             HW_BufferRemoveFront(&process->readfifo, 5 + commandsize);
          }
          else 
@@ -298,17 +464,22 @@ void HW_Process(HWProcess* process, unsigned char* buffer, unsigned int buffersi
    }   
 }
 
+
 int HW_ProcessSample(HWProcess* process, uint8_t* sampledata)
 {
    unsigned int header;
 	unsigned int address;
 	static unsigned int fifocount = 0;
    unsigned int i;
-   
+   unsigned char resynctoken[16] = {0x11, 0x11, 0x11, 0x11, 0x66, 0x66, 0x66, 0x66, 0xCC, 0xCC, 0xCC, 0xCC, 0x33, 0x33, 0x33, 0x33};
+   unsigned char magictoken[3] = {0x33, 0xAB, 0xB0};
+
+ 
 	header = sampledata[0];
 	address = sampledata[1] | (sampledata[2]<<8) | (sampledata[3]<<16);
-
-   if ( (header != 1) && (address == 0x7FFFE4))
+	
+   
+   if ( (header != 1) && (address == 0x7FFFE8))
    {
       unsigned char memdata[8];
       unsigned int mask = sampledata[12];
@@ -316,30 +487,49 @@ int HW_ProcessSample(HWProcess* process, uint8_t* sampledata)
       memcpy(memdata, sampledata+4, 8);
       fix_data_order(&mask, memdata);
       
-      if (memdata[1] == 0x33 && memdata[2] == 0xAB && memdata[3] == 0xB0 && memdata[0] <= 4)
+	  // Communication interrupt received, clear read and write fifo, and send the resynchronization token
+      if (!memcmp(memdata+1, magictoken, 3) && memdata[0] <= 4)
       {
-         HW_BufferAppend(&process->readfifo, memdata+4, memdata[0]);
+		 HW_BufferClear(&process->readfifo);
+		 HW_BufferClear(&process->writefifo);
+		 HW_BufferAppend(&process->writefifo, resynctoken, 16);
       }      
+   }
+   else if ( (header != 1) && (address == 0x7FFFE4))
+   {
+      unsigned char memdata[8];
+      unsigned int mask = sampledata[12];
+      
+      memcpy(memdata, sampledata+4, 8);
+      fix_data_order(&mask, memdata);
+	  
+      if ( (mask & 0x0F) == 0 )
+        memcpy(process->fifoincoming, memdata+0, 4);
+
+      if ( (mask & 0xF0) == 0 )
+      {
+		 
+         memcpy(process->fifoincoming+4, memdata+4, 4);
+		 
+         if (!memcmp(process->fifoincoming+1, magictoken, 3) && process->fifoincoming[0] <= 4)
+         {
+            HW_BufferAppend(&process->readfifo, process->fifoincoming+4, process->fifoincoming[0]);
+         }
+		 memset(process->fifoincoming, 0, 8);
+      }
    }
 	else if ( (header == 1) && (address == 0x7FFFE0))
 	{
       unsigned char memdata[8];
       unsigned int mask = sampledata[12];
       static unsigned char testbuffer[4] = {1, 2, 3, 4};
-      
-		//fifocount++;
-		//fprintf(stdout, "\nFifo was read %d\n", fifocount);
-		
+      		
       memcpy(memdata, sampledata+4, 8);
       fix_data_order(&mask, memdata);
       
       if (memdata[0] == 0 && memdata[1] == 0 && memdata[2] == 0 && memdata[3] == 0)
       {
          process->writefifocapacity += 4;
-         //if (fifofile)
-         //   fread(testbuffer, 1, 4, fifofile);
-         
-         //HW_FifoWrite(&writefifo, testbuffer, 4);
       }
 	}
 }

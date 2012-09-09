@@ -230,7 +230,8 @@ void HW_PatchDevice(HWPatchContext* ctx, FTDIDevice *dev)
 	HW_ConfigAddressWrite(&buffer, PATCHTRIGGERBYPASS, ctx->trigger.bypassaddress);
 	HW_ConfigAddressWrite(&buffer, PATCHTRIGGERDATALOWER, ctx->trigger.datalo);	
 	HW_ConfigAddressWrite(&buffer, PATCHTRIGGERDATAUPPER, ctx->trigger.datahi);
-	HW_ConfigAddressWrite(&buffer, PATCHHOOKENABLE, ctx->hookenabled);
+	if (ctx->hookenabled)
+		HW_ConfigAddressWrite(&buffer, PATCHHOOKENABLE, ctx->hookenabled);
 
 	HW_ConfigDevice(dev, &buffer, false);
 

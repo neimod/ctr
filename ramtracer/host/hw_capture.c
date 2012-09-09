@@ -37,9 +37,6 @@
 //#define ZCOMPLEVEL 2
 #define ZCOMPLEVEL 1
 
-//static HWBuffer configctx;
-//static HWBuffer writefifo;
-//static FILE* fifofile = 0;
 
 // Private functions
 static void* HW_CaptureThread(void* arg);
@@ -49,8 +46,6 @@ void HW_CaptureBegin(HWCapture* capture, FILE* outputFile, FTDIDevice* dev, int 
 {
 	int err;
 
-//	HW_ConfigInit(&configctx);
-//   HW_BufferInit(&writefifo, 16);
 
 	capture->outputFile = outputFile;
 	capture->compressedsize = 0;
@@ -59,8 +54,6 @@ void HW_CaptureBegin(HWCapture* capture, FILE* outputFile, FTDIDevice* dev, int 
    
    HW_ProcessInit(&capture->process, dev, processenabled);
 
-	if (outputFile == 0)
-		return;
 
 	pthread_mutex_init(&capture->mutex, 0);
 	capture->running = 1;
@@ -97,6 +90,8 @@ void HW_CaptureFinish(HWCapture* capture)
 	}
 	
 	pthread_mutex_destroy(&capture->mutex);
+	
+	HW_ProcessDestroy(&capture->process);
 }
 	
 
@@ -142,43 +137,37 @@ static void* HW_CaptureThread(void* arg)
 	int result;
 	unsigned int nodecount = 0;
 	unsigned int have = 0;
+	int savecapture = 1;
 	
 
-//   fifofile = fopen("fifo.bin", "rb");
-//
-//   {
-//      unsigned char testbuffer[0x100];
-      
-//      if (fifofile)
-//         fread(testbuffer, 1, 0x100, fifofile);
-   
-//      HW_FifoWrite(&writefifo, testbuffer, 0x100);
-//   }
+	capture->done = 0;
    
    
 	if (capture->outputFile == 0)
 	{
-		fprintf(stderr, "Error no output file provided\n");
-		exit(1);
+		savecapture = 0;
 	}
 
-	zbuffer = malloc(ZCHUNK);
-	if (zbuffer == 0)
+	if (savecapture)
 	{
-		fprintf(stderr, "Error allocating zbuffer\n");
-		exit(1);
+		zbuffer = malloc(ZCHUNK);
+		if (zbuffer == 0)
+		{
+			fprintf(stderr, "Error allocating zbuffer\n");
+			exit(1);
+		}
+
+		stream.zalloc = Z_NULL;
+		stream.zfree = Z_NULL;
+		stream.opaque = Z_NULL;
+		result = deflateInit(&stream, ZCOMPLEVEL);
+		if (result != Z_OK)
+		{
+			fprintf(stderr, "Error initializing ZLIB\n");
+			exit(1);
+		}
 	}
 
-    stream.zalloc = Z_NULL;
-    stream.zfree = Z_NULL;
-    stream.opaque = Z_NULL;
-    result = deflateInit(&stream, ZCOMPLEVEL);
-    if (result != Z_OK)
-	{
-		fprintf(stderr, "Error initializing ZLIB\n");
-		exit(1);
-	}
-	
 	while(capture->running)
 	{
 		
@@ -216,34 +205,37 @@ static void* HW_CaptureThread(void* arg)
 			continue;
 		}
       
-		stream.avail_in = capacity;
-		stream.next_in = buffer;
-		
-		do
+	    if (savecapture)
 		{
-			stream.avail_out = ZCHUNK;
-			stream.next_out = zbuffer;
+			stream.avail_in = capacity;
+			stream.next_in = buffer;
 			
-			result = deflate(&stream, Z_NO_FLUSH);
-			
-			if (result == Z_STREAM_ERROR)
+			do
 			{
-				fprintf(stderr, "Error compressing stream\n");
-				exit(1);
-			}
-			
-			have = ZCHUNK - stream.avail_out;
-			capture->compressedsize += have;
-			if (capture->outputFile) 
-			{
-				if (fwrite(zbuffer, have, 1, capture->outputFile) != 1) 
+				stream.avail_out = ZCHUNK;
+				stream.next_out = zbuffer;
+				
+				result = deflate(&stream, Z_NO_FLUSH);
+				
+				if (result == Z_STREAM_ERROR)
 				{
-					deflateEnd(&stream);
-					fprintf(stderr, "Write error\n");
+					fprintf(stderr, "Error compressing stream\n");
 					exit(1);
-				}			
-			}
-		} while(stream.avail_out == 0);
+				}
+				
+				have = ZCHUNK - stream.avail_out;
+				capture->compressedsize += have;
+				if (capture->outputFile) 
+				{
+					if (fwrite(zbuffer, have, 1, capture->outputFile) != 1) 
+					{
+						deflateEnd(&stream);
+						fprintf(stderr, "Write error\n");
+						exit(1);
+					}			
+				}
+			} while(stream.avail_out == 0);
+		}
 
 		
 		nodecount = 0;
@@ -262,43 +254,80 @@ static void* HW_CaptureThread(void* arg)
 			fprintf(stdout, "WARNING: %d hwbuffers still remaining\n", nodecount);
 	}
 	
-	// Write last remaining data in the buffers
-	while(1)
-	{		
-		HWBuffer* node = 0;
-		unsigned int available;
-		unsigned int capacity;
-		unsigned char* buffer;
+	if (savecapture)
+	{
+		// Write last remaining data in the buffers
+		while(1)
+		{		
+			HWBuffer* node = 0;
+			unsigned int available;
+			unsigned int capacity;
+			unsigned char* buffer;
+					
+			pthread_mutex_lock(&capture->mutex);
+			
+			node = HW_BufferChainGetFirst(&capture->chain);
+			
+			if (node)
+			{
+				available = node->capacity - node->size;
+				buffer = node->buffer;
+				capacity = node->capacity;
+			}
+			
+			pthread_mutex_unlock(&capture->mutex);
+			
+			if (node == 0)
+				break;
+			
+			if (available == capacity)
+				break;
+			
+			
+			stream.avail_in = capacity - available;
+			stream.next_in = buffer;
+			
+			do
+			{
+				stream.avail_out = ZCHUNK;
+				stream.next_out = zbuffer;
 				
-		pthread_mutex_lock(&capture->mutex);
-		
-		node = HW_BufferChainGetFirst(&capture->chain);
-		
-		if (node)
-		{
-			available = node->capacity - node->size;
-			buffer = node->buffer;
-			capacity = node->capacity;
+				result = deflate(&stream, Z_NO_FLUSH);
+				
+				if (result == Z_STREAM_ERROR)
+				{
+					fprintf(stderr, "Error compressing stream\n");
+					exit(1);
+				}
+				
+				have = ZCHUNK - stream.avail_out;
+				capture->compressedsize += have;
+				if (capture->outputFile) 
+				{
+					if (fwrite(zbuffer, have, 1, capture->outputFile) != 1)
+					{
+						deflateEnd(&stream);
+						fprintf(stderr, "Write error\n");
+						exit(1);
+					}
+				}
+				
+			} while(stream.avail_out == 0);
+					
+			pthread_mutex_lock(&capture->mutex);
+			HW_BufferChainDestroyFirst(&capture->chain);
+			pthread_mutex_unlock(&capture->mutex);		
 		}
 		
-		pthread_mutex_unlock(&capture->mutex);
-		
-		if (node == 0)
-			break;
-		
-		if (available == capacity)
-			break;
-		
-		
-		stream.avail_in = capacity - available;
-		stream.next_in = buffer;
+		stream.avail_in = 0;
+		stream.next_in = NULL;
 		
 		do
 		{
 			stream.avail_out = ZCHUNK;
 			stream.next_out = zbuffer;
 			
-			result = deflate(&stream, Z_NO_FLUSH);
+			result = deflate(&stream, Z_FINISH);
 			
 			if (result == Z_STREAM_ERROR)
 			{
@@ -308,59 +337,24 @@ static void* HW_CaptureThread(void* arg)
 			
 			have = ZCHUNK - stream.avail_out;
 			capture->compressedsize += have;
-			if (capture->outputFile) 
+			if (capture->outputFile)
 			{
 				if (fwrite(zbuffer, have, 1, capture->outputFile) != 1)
 				{
 					deflateEnd(&stream);
 					fprintf(stderr, "Write error\n");
 					exit(1);
-				}
+				}		
 			}
-			
 		} while(stream.avail_out == 0);
-				
-		pthread_mutex_lock(&capture->mutex);
-		HW_BufferChainDestroyFirst(&capture->chain);
-		pthread_mutex_unlock(&capture->mutex);		
+		
+		
+		deflateEnd(&stream);
+		free(zbuffer);
 	}
-	
-	stream.avail_in = 0;
-	stream.next_in = NULL;
-	
-	do
-	{
-		stream.avail_out = ZCHUNK;
-		stream.next_out = zbuffer;
-		
-		result = deflate(&stream, Z_FINISH);
-		
-		if (result == Z_STREAM_ERROR)
-		{
-			fprintf(stderr, "Error compressing stream\n");
-			exit(1);
-		}
-		
-		have = ZCHUNK - stream.avail_out;
-		capture->compressedsize += have;
-		if (capture->outputFile)
-		{
-			if (fwrite(zbuffer, have, 1, capture->outputFile) != 1)
-			{
-				deflateEnd(&stream);
-				fprintf(stderr, "Write error\n");
-				exit(1);
-			}		
-		}
-	} while(stream.avail_out == 0);
-	
-	
-	deflateEnd(&stream);
-	free(zbuffer);
    
    capture->done = 1;
    
-//   printf("Thread stopped.\n\n");
 
 	return 0;
 }

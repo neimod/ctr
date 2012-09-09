@@ -342,6 +342,7 @@ void HW_Trace(FTDIDevice *dev, const char *filename)
 
 	HW_CaptureBegin(&capture, outputFile, dev, processEnabled);
 
+
 	err = FTDIDevice_ReadStream(dev, FTDI_INTERFACE_A, HW_ReadCallback, NULL, PACKETS_PER_TRANSFER, NUM_TRANSFERS);
 	if (err < 0 && !exitRequested)
 	{
@@ -381,7 +382,7 @@ static int HW_ReadCallback(FTDIDevice* dev, FTDICallbackType cbtype, uint8_t *bu
    else 
    {
       
-      if (length && outputFile) 
+      if (length) 
          HW_CaptureDataBlock(&capture, buffer, length);
       
       if (progress) 
@@ -411,5 +412,10 @@ static int HW_ReadCallback(FTDIDevice* dev, FTDICallbackType cbtype, uint8_t *bu
 
 static void HW_SigintHandler(int signum)
 {
-   exitRequested = true;
+   HW_RequestExit();
+}
+
+void HW_RequestExit()
+{
+  exitRequested = true;
 }

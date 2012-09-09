@@ -1,5 +1,5 @@
 /*
- * hw_process.h - Processing of RAM tracing data.
+ * hw_commandtype.h - Command types.
  *
  * Copyright (C) 2012 neimod
  *
@@ -22,50 +22,51 @@
  * THE SOFTWARE.
  */
 
-#ifndef __HW_PROCESS_H_
-#define __HW_PROCESS_H_
+#ifndef __HW_COMMANDTYPE_H_
+#define __HW_COMMANDTYPE_H_
 
-#include <stdio.h>
-#include <pthread.h>
-#include "hw_buffer.h"
-#include "hw_command.h"
-#include "server.h"
-#include "fastftdi.h"
+#include "hw_mempool.h"
+#include "hw_commandbuffer.h"
+
+
+#define CMDTYPE_NUMBER 1
+#define CMDTYPE_BUFFER 2
+
+
+
 /*
- * HWCapture -- Worker structure for a seperately running thread that does heavy processing
- *              on real-time captured RAM tracing data, such as compression and saving to disk. 
+ * HWCommandType -- The command type structure.
  */
 
-#define MAXFILES 16
+struct HWCommandNumberType;
+struct HWCommandBufferType;
 
-typedef struct
+typedef struct HWCommandType
 {
-   FILE* file;
-   int used;
-} filenode;
+	unsigned int type;
+	struct HWCommandType* next;
+	union {
+		struct HWCommandNumberType* number;
+		struct HWCommandBufferType* buffer;
+	};
+} HWCommandType;
 
-typedef struct
-{
-   unsigned int writefifocapacity;
-   HWBuffer config;   
-   HWBuffer writefifo;
-   HWBuffer readfifo;   
-   HWBuffer databuffer;
-   FTDIDevice* dev;
-   int enabled;
-   unsigned char fifoincoming[8];
-   filenode filemap[MAXFILES];
-   HWCommand command;
-   Server server;
-} HWProcess;
+typedef struct HWCommandNumberType {
+	HWCommandType header;
+	HWCommandNumber data;
+} HWCommandNumberType;
+
+typedef struct HWCommandBufferType {
+	HWCommandType header;
+	HWCommandBuffer* data;
+} HWCommandBufferType;
+
 
 /*
  * Public functions
  */
-void HW_ProcessInit(HWProcess* process, FTDIDevice* dev, int enabled);
-void HW_ProcessDestroy(HWProcess* process);
-void HW_Process(HWProcess* process, unsigned char* buffer, unsigned int buffersize);
-int HW_ProcessSample(HWProcess* process, uint8_t* sampledata);
-int HW_ProcessBlock(HWProcess* process, uint8_t *buffer, int length);
+HWCommandType* HW_CommandTypeAllocWithNumber(HWMemoryPool* pool, HWCommandNumber* num);
+HWCommandType* HW_CommandTypeAllocWithBuffer(HWMemoryPool* pool, HWCommandBuffer* buffer);
+HWCommandType* HW_CommandTypeAppend(HWCommandType* root, HWCommandType* child);
 
-#endif // __HW_PROCESS_H_
+#endif // __HW_COMMANDTYPE_H_

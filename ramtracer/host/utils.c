@@ -159,11 +159,71 @@ void changeterminal(int dir)
 	if ( dir == 1 )
 	{
 		tcgetattr( STDIN_FILENO, &oldt);
-		newt = oldt;
-		newt.c_lflag &= ~( ICANON | ECHO );
-		tcsetattr( STDIN_FILENO, TCSANOW, &newt);
+		//newt = oldt;
+		//newt.c_lflag &= ~( ICANON | ECHO );
+		//tcsetattr( STDIN_FILENO, TCSANOW, &newt);
 	}
 	else
 		tcsetattr( STDIN_FILENO, TCSANOW, &oldt);
 }
 
+void memdump(FILE* fout, const char* prefix, const unsigned char* data, unsigned int size)
+{
+	unsigned int i;
+	unsigned int prefixlen = strlen(prefix);
+	unsigned int offs = 0;
+	unsigned int line = 0;
+	while(size)
+	{
+		unsigned int max = 32;
+
+		if (max > size)
+			max = size;
+
+		if (line==0)
+			fprintf(fout, "%s", prefix);
+		else
+			fprintf(fout, "%*s", prefixlen, "");
+
+
+		for(i=0; i<max; i++)
+			fprintf(fout, "%02X ", data[offs+i]);
+		fprintf(fout, "\n");
+		line++;
+		size -= max;
+		offs += max;
+	}
+}
+
+void hexdump(const void *ptr, int buflen)
+{
+	unsigned char *buf = (unsigned char*)ptr;
+	int i, j;
+
+	for (i=0; i<buflen; i+=16)
+	{
+		printf("%06x: ", i);
+		for (j=0; j<16; j++)
+		{ 
+			if (i+j < buflen)
+			{
+				printf("%02X ", buf[i+j]);
+			}
+			else
+			{
+				printf("   ");
+			}
+		}
+
+		printf(" ");
+
+		for (j=0; j<16; j++) 
+		{
+			if (i+j < buflen)
+			{
+				printf("%c", (buf[i+j] >= 0x20 && buf[i+j] <= 0x7e) ? buf[i+j] : '.');
+			}
+		}
+		printf("\n");
+	}
+}
