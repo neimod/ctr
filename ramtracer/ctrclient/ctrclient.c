@@ -54,6 +54,7 @@ void ctrclient_init()
 #endif
 }
 
+
 int ctrclient_connect(ctrclient* client, const char* hostname, const char* port)
 {
     struct addrinfo hints;
@@ -63,8 +64,19 @@ int ctrclient_connect(ctrclient* client, const char* hostname, const char* port)
     char s[INET6_ADDRSTRLEN];
 	unsigned int authsize = 0;
 	unsigned char auth[MAX_CHALLENGESIZE];
+	FILE* authfile = 0;
 
-	FILE* authfile = fopen("auth.txt", "rb");
+	const char* homedir = getenv("HOME");
+	if (homedir != 0)
+	{
+		char tmpname[255];
+		sprintf(tmpname, "%s/.3ds/auth.txt", homedir);
+		authfile = fopen(tmpname, "rb");
+	}	
+	if (authfile == 0)
+	{
+		authfile = fopen("auth.txt", "rb");
+	}
 
 	if (authfile == 0)
 	{
@@ -82,6 +94,7 @@ int ctrclient_connect(ctrclient* client, const char* hostname, const char* port)
 		fclose(authfile);
 	}
 
+	return 0;
 
     memset(&hints, 0, sizeof hints);
     hints.ai_family = AF_UNSPEC;
