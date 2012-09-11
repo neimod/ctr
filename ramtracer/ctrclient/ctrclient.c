@@ -94,8 +94,6 @@ int ctrclient_connect(ctrclient* client, const char* hostname, const char* port)
 		fclose(authfile);
 	}
 
-	return 0;
-
     memset(&hints, 0, sizeof hints);
     hints.ai_family = AF_UNSPEC;
     hints.ai_socktype = SOCK_STREAM;
