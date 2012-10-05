@@ -48,8 +48,28 @@
 #define CMD_MEMSET			0x0E
 #define CMD_SETEXCEPTION	0x0F
 
+#define CMD_SETBREAKPOINT	0x20
+#define CMD_UNSETBREAKPOINT	0x21
+#define CMD_CONTINUE		0x22
+#define CMD_EXCEPTION		0x23
+
 #define CMD_AESCTR			0x80
 #define CMD_AESCONTROL		0x81
+#define CMD_AESCBCDEC		0x82
+#define CMD_AESCBCENC		0x83
+#define CMD_AESCCMENC		0x84
+#define CMD_AESCCMDEC		0x85
+
+
+#define CMD_GDB_LASTSIG		0x1000
+#define CMD_GDB_READREG		0x1001
+#define CMD_GDB_READREGS	0x1002
+#define CMD_GDB_WRITEREG	0x1003
+#define CMD_GDB_WRITEREGS	0x1004
+#define CMD_GDB_READMEM		0x1005
+#define CMD_GDB_WRITEMEM	0x1006
+#define CMD_GDB_CONTINUE	0x1007
+
 
 #define CMD_AESCONTROL_SIZE		40
 
@@ -57,6 +77,15 @@
 /*
  * HWCommand -- Worker structure for input command processing. 
  */
+
+#define BREAKPOINTMAX 1024
+
+typedef struct
+{
+	unsigned int orgins;
+	unsigned int address;
+	unsigned int used;
+} breakpoint;
 
 
 typedef struct
@@ -68,7 +97,9 @@ typedef struct
    unsigned int curcmdsize;
    unsigned int curcmdactive;
    HWMemoryPool mempool;
-	int running;   
+   int running;
+   breakpoint breakpoints[BREAKPOINTMAX];
+	
 } HWCommand;
 
 
@@ -92,6 +123,9 @@ void HW_CommandReadByte(HWCommand* command, unsigned int address);
 void HW_CommandReadShort(HWCommand* command, unsigned int address);
 void HW_CommandReadLong(HWCommand* command, unsigned int address);
 void HW_CommandReadMem(HWCommand* command, unsigned int address, unsigned int size);
+
+void HW_CommandBreakpoint(HWCommand* command, unsigned int address);
+void HW_CommandContinue(HWCommand* command);
 
 void HW_CommandParse(HWCommand* command);
 void HW_CommandProcessResponse(HWCommand* command, unsigned int cmdid, unsigned char* buffer, unsigned int buffersize);

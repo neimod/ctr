@@ -31,6 +31,8 @@
 
 #include "fastftdi.h"
 #include "hw_main.h"
+#include "server.h"
+#include "debugger.h"
 
 static void usage(const char *argv0);
 
@@ -70,15 +72,19 @@ int main(int argc, char **argv)
          {"patch", 1, NULL, 'p'},
          {"flatpatch", 1, NULL, 'l'},
 		 {"server", 0, NULL, 's'},
+		 {"gdb", 0, NULL, 'd'},
          {NULL},
       };
 
-      c = getopt_long(argc, argv, "sb:p:l:", long_options, &option_index);
+      c = getopt_long(argc, argv, "sb:p:l:d", long_options, &option_index);
       if (c == -1)
          break;
 
       switch (c) 
 	  {
+	  case 'd':
+		 DebuggerSetEnabled(1);
+		 break;
 	  case 's':
 		 ServerSetEnabled(1);
 		 break;

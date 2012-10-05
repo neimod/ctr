@@ -32,7 +32,7 @@
 #include "hw_command.h"
 
 #define SERVER_MIN_CMD_ID	0x80
-#define SERVER_MAX_BUFFERSIZE 		(1024 * 1024)
+#define SERVER_MAX_BUFFERSIZE 		(4 * 1024 * 1024)
 #define SERVER_MAX_CHALLENGESIZE	0x100
 
 /*

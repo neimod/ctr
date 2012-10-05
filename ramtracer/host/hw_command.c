@@ -48,6 +48,8 @@ static void HW_CommandStop(HWCommand* command);
 
 void HW_CommandInit(HWCommand* command, int enabled)
 {
+	unsigned int i;
+
 	command->curcmdactive = 0;
 	command->curcmdpos = 0;
 	command->curcmdsize = 0;
@@ -56,6 +58,13 @@ void HW_CommandInit(HWCommand* command, int enabled)
 	HW_BufferInit(&command->buffer, 16);
 	HW_MemoryPoolInit(&command->mempool, 1024 * 1024);
 	pthread_mutex_init(&command->mutex, 0);
+	
+	for(i=0; i<BREAKPOINTMAX; i++)
+	{
+		command->breakpoints[i].orgins = 0;
+		command->breakpoints[i].address = 0;
+		command->breakpoints[i].used = 0;
+	}
 	
 	if (enabled)
 		HW_CommandBegin(command);
@@ -370,6 +379,29 @@ void HW_CommandMemset(HWCommand* command, unsigned int address, unsigned int val
 	HW_CommandAddEnd(command);
 }
 
+
+void HW_CommandSetBreakpoint(HWCommand* command, unsigned int address)
+{
+	HW_CommandAddBegin(command, CMD_SETBREAKPOINT);
+	HW_CommandAddLong(command, address);
+	HW_CommandAddEnd(command);
+}
+
+void HW_CommandUnsetBreakpoint(HWCommand* command, unsigned int address, unsigned int orgins)
+{
+	HW_CommandAddBegin(command, CMD_UNSETBREAKPOINT);
+	HW_CommandAddLong(command, address);
+	HW_CommandAddLong(command, orgins);
+	HW_CommandAddEnd(command);
+}
+
+void HW_CommandContinue(HWCommand* command)
+{
+	HW_CommandAddBegin(command, CMD_CONTINUE);
+	HW_CommandAddEnd(command);
+}
+
+
 void HW_CommandSetExceptionDataAbort(HWCommand* command, unsigned int value)
 {
 	HW_CommandAddBegin(command, CMD_SETEXCEPTION);
@@ -640,6 +672,49 @@ void HW_CommandProcessResponse(HWCommand* command, unsigned int cmdid, unsigned 
 		}
 		printf("\n");
 	}
+	else if (cmdid == CMD_SETBREAKPOINT)
+	{
+		unsigned int address = buffer_readle32(buffer, &bufferpos, buffersize);
+		unsigned int orgins = buffer_readle32(buffer, &bufferpos, buffersize);
+	
+		for(i=0; i<BREAKPOINTMAX; i++)
+		{
+			if (!command->breakpoints[i].used)
+			{
+				command->breakpoints[i].used = 1;
+				command->breakpoints[i].address = address;
+				command->breakpoints[i].orgins = orgins;
+				
+				break;
+			}
+		}		
+		printf(">\b");
+	}
+	else if (cmdid == CMD_CONTINUE)
+	{
+		printf(">\b");
+	}
+	else if (cmdid == CMD_EXCEPTION)
+	{
+		unsigned int pc = buffer_readle32(buffer, &bufferpos, buffersize);
+		unsigned int vector = buffer_readle32(buffer, &bufferpos, buffersize);
+		int found = 0;
+	
+		for(i=0; i<BREAKPOINTMAX; i++)
+		{
+			if (command->breakpoints[i].used && (command->breakpoints[i].address & ~1) == pc)
+			{
+				command->breakpoints[i].used = 0;
+				printf("> Breakpoint hit at 0x%08X\n", pc);
+				HW_CommandUnsetBreakpoint(command, command->breakpoints[i].address, command->breakpoints[i].orgins);
+				found = 1;
+				break;
+			}
+		}
+		
+		if (!found)
+			printf("> Exception triggered at 0x%08X (%d)\n", pc, vector);
+	}	
 	else
 	{
 		printf("> Unknown command response 0x%02X received.\n", cmdid);

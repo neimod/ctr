@@ -382,6 +382,22 @@ unsigned int ServerRead(Server* server, HWBuffer* buffer)
 				valid = 1;
 			else if (cmdid == CMD_AESCTR)
 				valid = 1;
+			else if (cmdid == CMD_AESCBCDEC)
+				valid = 1;
+			else if (cmdid == CMD_AESCBCENC)
+				valid = 1;
+			else if (cmdid == CMD_AESCCMENC || cmdid == CMD_AESCCMDEC)
+			{
+				if (server->receivebuffer.size >= 16)
+				{
+					unsigned int payloadblockcount = (cmdbuf[8]<<0) | (cmdbuf[9]<<8) | (cmdbuf[10]<<16) | (cmdbuf[11]<<24);
+					unsigned int assocblockcount = (cmdbuf[12]<<0) | (cmdbuf[13]<<8) | (cmdbuf[14]<<16) | (cmdbuf[15]<<24);
+					unsigned int expectedsize = payloadblockcount * 16 + assocblockcount * 16 + 28;
+					
+					if (payloadblockcount <= 0xFFFF && assocblockcount <= 0xFFFF && cmdsize == expectedsize)
+						valid = 1;
+				}
+			}
 			
 			
 			if (totalsize <= SERVER_MAX_BUFFERSIZE && server->receivebuffer.size >= totalsize)

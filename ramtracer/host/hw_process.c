@@ -75,11 +75,15 @@ void HW_ProcessInit(HWProcess* process, FTDIDevice* dev, int enabled)
    
    if (ServerIsEnabled())
       ServerBegin(&process->server);
+   if (DebuggerIsEnabled())
+      DebuggerBegin(&process->debugger);
 }
 
 
 void HW_ProcessDestroy(HWProcess* process) 
 {
+   if (DebuggerIsEnabled())
+      DebuggerFinish(&process->debugger);
    if (ServerIsEnabled())
       ServerFinish(&process->server);
 
@@ -359,8 +363,12 @@ void HW_ProcessServiceCommandRequest(HWProcess* process, unsigned int command, u
       // No command in queue, so try the server
       if (0 == ServerRead(&process->server, &process->writefifo))
 	  {	  
-		  // No commands in queue or server, so send the idle command
-		  HW_BufferAppend(&process->writefifo, idle, 8);
+		  // No command in queue, so try the debugger
+		  if (0 == DebuggerRead(&process->debugger, &process->writefifo))
+		  {	  
+			  // No commands in queue, so send the idle command
+			  HW_BufferAppend(&process->writefifo, idle, 8);
+		  }
 	  }
    }
 }
@@ -373,7 +381,9 @@ void HW_ProcessServiceCommandResponse(HWProcess* process, unsigned int command, 
    {
       command = (buffer[0]<<0) | (buffer[1]<<8) | (buffer[2]<<16) | (buffer[3]<<24);
 	  
-	  if (command >= SERVER_MIN_CMD_ID)
+	  if (command >= DEBUGGER_MIN_CMD_ID)
+	    DebuggerWrite(&process->debugger, command, buffer+4, buffersize-4);
+	  else if (command >= SERVER_MIN_CMD_ID)
 	    ServerWrite(&process->server, command, buffer+4, buffersize-4);
 	  else
 		HW_CommandProcessResponse(&process->command, command, buffer+4, buffersize-4);
@@ -526,7 +536,7 @@ int HW_ProcessSample(HWProcess* process, uint8_t* sampledata)
       		
       memcpy(memdata, sampledata+4, 8);
       fix_data_order(&mask, memdata);
-      
+	        
       if (memdata[0] == 0 && memdata[1] == 0 && memdata[2] == 0 && memdata[3] == 0)
       {
          process->writefifocapacity += 4;

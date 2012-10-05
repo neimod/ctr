@@ -30,6 +30,7 @@
 #include "hw_buffer.h"
 #include "hw_command.h"
 #include "server.h"
+#include "debugger.h"
 #include "fastftdi.h"
 /*
  * HWCapture -- Worker structure for a seperately running thread that does heavy processing
@@ -57,6 +58,7 @@ typedef struct
    filenode filemap[MAXFILES];
    HWCommand command;
    Server server;
+   Debugger debugger;
 } HWProcess;
 
 /*

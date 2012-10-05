@@ -53,13 +53,15 @@
      CMDQUIT = 271,
      CMDPXI = 272,
      CMDMEMSET = 273,
-     CMDSETEXCEPTION = 274,
-     DABORT = 275,
-     PABORT = 276,
-     ENDLINE = 277,
-     LBRACKET = 278,
-     RBRACKET = 279,
-     UNKNOWN = 280
+     CMDBREAKPOINT = 274,
+     CMDCONTINUE = 275,
+     CMDSETEXCEPTION = 276,
+     DABORT = 277,
+     PABORT = 278,
+     ENDLINE = 279,
+     LBRACKET = 280,
+     RBRACKET = 281,
+     UNKNOWN = 282
    };
 #endif
 
@@ -81,7 +83,7 @@ typedef union YYSTYPE
 
 
 /* Line 2068 of yacc.c  */
-#line 85 "commandparser.h"
+#line 87 "commandparser.h"
 } YYSTYPE;
 # define YYSTYPE_IS_TRIVIAL 1
 # define yystype YYSTYPE /* obsolescent; will be withdrawn */

@@ -27,7 +27,7 @@ OBJS := main.o fastftdi.o fpgaconfig.o bit_file.o \
         hw_main.o hw_buffer.o hw_capture.o utils.o \
         hw_patch.o hw_config.o hw_process.o hw_command.o \
 		hw_commandbuffer.o commandparser.o commandlex.o \
-		hw_mempool.o hw_commandtype.o server.o
+		hw_mempool.o hw_commandtype.o server.o debugger.o
 
 CFLAGS += -O3 -g
 
