@@ -268,11 +268,8 @@ static int ctrclient_aes_ccm_crypto(ctrclient* client, unsigned int maclen, unsi
 		return 0;
 	if (!ctrclient_sendbuffer(client, &ccmheader, sizeof(aesccmheader)))
 		return 0;
-	if (assocsize)
-	{
-		if (!ctrclient_sendbuffer(client, assocbuffer, assocsize))
-			return 0;
-	}
+	if (!ctrclient_sendbuffer(client, assocbuffer, assocsize))
+		return 0;
 	if (!ctrclient_sendbuffer(client, payloadbuffer, payloadsize))
 		return 0;
 	if (!ctrclient_recvbuffer(client, header, 8))
@@ -300,9 +297,20 @@ int ctrclient_aes_ccm_encrypt(ctrclient* client, unsigned char* buffer, unsigned
 	return ctrclient_aes_ccm_crypto(client, 16, mac, 0, 0, buffer, size, CMD_AESCCMENC);
 }
 
+int ctrclient_aes_ccm_encryptex(ctrclient* client, unsigned char* payloadbuffer, unsigned int payloadsize, unsigned char* assocbuffer, unsigned int assocsize, unsigned int maclen, unsigned char mac[16])
+{
+	return ctrclient_aes_ccm_crypto(client, maclen, mac, assocbuffer, assocsize, payloadbuffer, payloadsize, CMD_AESCCMENC);
+}
+
 int ctrclient_aes_ccm_decrypt(ctrclient* client, unsigned char* buffer, unsigned int size, unsigned char mac[16])
 {
 	return ctrclient_aes_ccm_crypto(client, 16, mac, 0, 0, buffer, size, CMD_AESCCMDEC);
+}
+
+
+int ctrclient_aes_ccm_decryptex(ctrclient* client, unsigned char* payloadbuffer, unsigned int payloadsize, unsigned char* assocbuffer, unsigned int assocsize, unsigned int maclen, unsigned char mac[16])
+{
+	return ctrclient_aes_ccm_crypto(client, maclen, mac, assocbuffer, assocsize, payloadbuffer, payloadsize, CMD_AESCCMDEC);
 }
 
 
