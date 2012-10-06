@@ -49,6 +49,8 @@ int ctrclient_sendbuffer(ctrclient* client, const void* buffer, unsigned int siz
 int ctrclient_recvbuffer(ctrclient* client, void* buffer, unsigned int size);
 int ctrclient_sendlong(ctrclient* client, unsigned int value);
 int ctrclient_aes_ctr_crypt(ctrclient* client, unsigned char* buffer, unsigned int size);
+int ctrclient_aes_cbc_decrypt(ctrclient* client, unsigned char* buffer, unsigned int size);
+int ctrclient_aes_cbc_encrypt(ctrclient* client, unsigned char* buffer, unsigned int size);
 int ctrclient_aes_ccm_encrypt(ctrclient* client, unsigned char* buffer, unsigned int size, unsigned char mac[16]);
 int ctrclient_aes_ccm_encryptex(ctrclient* client, unsigned char* payloadbuffer, unsigned int payloadsize, unsigned char* assocbuffer, unsigned int assocsize, unsigned int maclen, unsigned char mac[16]);
 int ctrclient_aes_ccm_decrypt(ctrclient* client, unsigned char* buffer, unsigned int size, unsigned char mac[16]);
