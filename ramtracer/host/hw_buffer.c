@@ -6,8 +6,8 @@
 HWBuffer* HW_BufferAllocate(unsigned int size)
 {
    unsigned int headersize = (sizeof(HWBuffer) + 7) & (~7);
-	unsigned char* memory = malloc(headersize + size);	
-   HWBuffer* node = (HWBuffer*)memory;
+	unsigned char* memory = 0;	
+   HWBuffer* node = 0;
    
    if (size < 16)
       size = 16;
