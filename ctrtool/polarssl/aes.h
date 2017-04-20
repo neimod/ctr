@@ -1,10 +1,12 @@
 /**
  * \file aes.h
  *
- *  Copyright (C) 2006-2009, Paul Bakker <polarssl_maintainer at polarssl.org>
- *  All rights reserved.
+ *  Copyright (C) 2006-2010, Brainspark B.V.
  *
- *  Joined copyright on original XySSL code with: Christophe Devine
+ *  This file is part of PolarSSL (http://www.polarssl.org)
+ *  Lead Maintainer: Paul Bakker <polarssl_maintainer at polarssl.org>
+ *
+ *  All rights reserved.
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -27,6 +29,7 @@
 #define AES_DECRYPT     0
 
 #define POLARSSL_ERR_AES_INVALID_KEY_LENGTH                 -0x0800
+#define POLARSSL_ERR_AES_INVALID_INPUT_LENGTH               -0x0810
 
 /**
  * \brief          AES context structure
@@ -52,7 +55,7 @@ extern "C" {
  *
  * \return         0 if successful, or POLARSSL_ERR_AES_INVALID_KEY_LENGTH
  */
-int aes_setkey_enc( aes_context *ctx, unsigned char *key, int keysize );
+int aes_setkey_enc( aes_context *ctx, const unsigned char *key, int keysize );
 
 /**
  * \brief          AES key schedule (decryption)
@@ -63,7 +66,7 @@ int aes_setkey_enc( aes_context *ctx, unsigned char *key, int keysize );
  *
  * \return         0 if successful, or POLARSSL_ERR_AES_INVALID_KEY_LENGTH
  */
-int aes_setkey_dec( aes_context *ctx, unsigned char *key, int keysize );
+int aes_setkey_dec( aes_context *ctx, const unsigned char *key, int keysize );
 
 /**
  * \brief          AES-ECB block encryption/decryption
@@ -72,10 +75,12 @@ int aes_setkey_dec( aes_context *ctx, unsigned char *key, int keysize );
  * \param mode     AES_ENCRYPT or AES_DECRYPT
  * \param input    16-byte input block
  * \param output   16-byte output block
+ *
+ * \return         0 if successful
  */
-void aes_crypt_ecb( aes_context *ctx,
+int aes_crypt_ecb( aes_context *ctx,
                     int mode,
-                    unsigned char input[16],
+                    const unsigned char input[16],
                     unsigned char output[16] );
 
 /**
@@ -89,12 +94,14 @@ void aes_crypt_ecb( aes_context *ctx,
  * \param iv       initialization vector (updated after use)
  * \param input    buffer holding the input data
  * \param output   buffer holding the output data
+ *
+ * \return         0 if successful, or POLARSSL_ERR_AES_INVALID_INPUT_LENGTH
  */
-void aes_crypt_cbc( aes_context *ctx,
+int aes_crypt_cbc( aes_context *ctx,
                     int mode,
                     int length,
                     unsigned char iv[16],
-                    unsigned char *input,
+                    const unsigned char *input,
                     unsigned char *output );
 
 /**
@@ -107,13 +114,15 @@ void aes_crypt_cbc( aes_context *ctx,
  * \param iv       initialization vector (updated after use)
  * \param input    buffer holding the input data
  * \param output   buffer holding the output data
+ *
+ * \return         0 if successful
  */
-void aes_crypt_cfb128( aes_context *ctx,
+int aes_crypt_cfb128( aes_context *ctx,
                        int mode,
                        int length,
                        int *iv_off,
                        unsigned char iv[16],
-                       unsigned char *input,
+                       const unsigned char *input,
                        unsigned char *output );
 
 /**

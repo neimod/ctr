@@ -41,7 +41,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="windows"
+				AdditionalIncludeDirectories="windows;."
 				PreprocessorDefinitions="WIN32;_DEBUG;_CONSOLE"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
@@ -49,6 +49,8 @@
 				UsePrecompiledHeader="0"
 				WarningLevel="3"
 				DebugInformationFormat="4"
+				DisableSpecificWarnings="4996"
+				UseFullPaths="false"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -115,6 +117,7 @@
 				Name="VCCLCompilerTool"
 				Optimization="2"
 				EnableIntrinsicFunctions="true"
+				AdditionalIncludeDirectories="windows;."
 				PreprocessorDefinitions="WIN32;NDEBUG;_CONSOLE"
 				RuntimeLibrary="2"
 				EnableFunctionLevelLinking="true"
@@ -133,6 +136,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
+				OutputFile="c:\dev\tools\bin\ctrtool.exe"
 				LinkIncremental="1"
 				GenerateDebugInformation="true"
 				SubSystem="1"
@@ -172,11 +176,31 @@
 			UniqueIdentifier="{4FC737F1-C7A5-4376-A066-2A32D752A2FF}"
 			>
 			<File
-				RelativePath=".\aes.c"
+				RelativePath=".\cia.c"
 				>
 			</File>
 			<File
 				RelativePath=".\ctr.c"
+				>
+			</File>
+			<File
+				RelativePath=".\cwav.c"
+				>
+			</File>
+			<File
+				RelativePath=".\exefs.c"
+				>
+			</File>
+			<File
+				RelativePath=".\exheader.c"
+				>
+			</File>
+			<File
+				RelativePath=".\filepath.c"
+				>
+			</File>
+			<File
+				RelativePath=".\firm.c"
 				>
 			</File>
 			<File
@@ -188,9 +212,93 @@
 				>
 			</File>
 			<File
+				RelativePath=".\ivfc.c"
+				>
+			</File>
+			<File
+				RelativePath=".\keyset.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\lzss.c"
+				>
+			</File>
+			<File
 				RelativePath=".\main.c"
 				>
 			</File>
+			<File
+				RelativePath=".\ncch.c"
+				>
+			</File>
+			<File
+				RelativePath=".\ncsd.c"
+				>
+			</File>
+			<File
+				RelativePath=".\romfs.c"
+				>
+			</File>
+			<File
+				RelativePath=".\settings.c"
+				>
+			</File>
+			<File
+				RelativePath=".\stream.c"
+				>
+			</File>
+			<File
+				RelativePath=".\tik.c"
+				>
+			</File>
+			<File
+				RelativePath=".\tmd.c"
+				>
+			</File>
+			<File
+				RelativePath=".\utils.c"
+				>
+			</File>
+			<Filter
+				Name="polarssl"
+				>
+				<File
+					RelativePath=".\polarssl\aes.c"
+					>
+				</File>
+				<File
+					RelativePath=".\polarssl\bignum.c"
+					>
+				</File>
+				<File
+					RelativePath=".\polarssl\rsa.c"
+					>
+				</File>
+				<File
+					RelativePath=".\polarssl\sha2.c"
+					>
+				</File>
+			</Filter>
+			<Filter
+				Name="tinyxml"
+				>
+				<File
+					RelativePath=".\tinyxml\tinystr.cpp"
+					>
+				</File>
+				<File
+					RelativePath=".\tinyxml\tinyxml.cpp"
+					>
+				</File>
+				<File
+					RelativePath=".\tinyxml\tinyxmlerror.cpp"
+					>
+				</File>
+				<File
+					RelativePath=".\tinyxml\tinyxmlparser.cpp"
+					>
+				</File>
+			</Filter>
 		</Filter>
 		<Filter
 			Name="Header Files"
@@ -198,7 +306,7 @@
 			UniqueIdentifier="{93995380-89BD-4b04-88EB-625FBE52EBFB}"
 			>
 			<File
-				RelativePath=".\aes.h"
+				RelativePath=".\cia.h"
 				>
 			</File>
 			<File
@@ -206,9 +314,121 @@
 				>
 			</File>
 			<File
+				RelativePath=".\cwav.h"
+				>
+			</File>
+			<File
+				RelativePath=".\exefs.h"
+				>
+			</File>
+			<File
+				RelativePath=".\exheader.h"
+				>
+			</File>
+			<File
+				RelativePath=".\filepath.h"
+				>
+			</File>
+			<File
+				RelativePath=".\firm.h"
+				>
+			</File>
+			<File
 				RelativePath=".\windows\getopt.h"
 				>
 			</File>
+			<File
+				RelativePath=".\info.h"
+				>
+			</File>
+			<File
+				RelativePath=".\ivfc.h"
+				>
+			</File>
+			<File
+				RelativePath=".\keyset.h"
+				>
+			</File>
+			<File
+				RelativePath=".\lzss.h"
+				>
+			</File>
+			<File
+				RelativePath=".\ncch.h"
+				>
+			</File>
+			<File
+				RelativePath=".\ncsd.h"
+				>
+			</File>
+			<File
+				RelativePath=".\romfs.h"
+				>
+			</File>
+			<File
+				RelativePath=".\settings.h"
+				>
+			</File>
+			<File
+				RelativePath=".\stream.h"
+				>
+			</File>
+			<File
+				RelativePath=".\tik.h"
+				>
+			</File>
+			<File
+				RelativePath=".\tmd.h"
+				>
+			</File>
+			<File
+				RelativePath=".\types.h"
+				>
+			</File>
+			<File
+				RelativePath=".\utils.h"
+				>
+			</File>
+			<Filter
+				Name="polarssl"
+				>
+				<File
+					RelativePath=".\polarssl\aes.h"
+					>
+				</File>
+				<File
+					RelativePath=".\polarssl\bignum.h"
+					>
+				</File>
+				<File
+					RelativePath=".\polarssl\bn_mul.h"
+					>
+				</File>
+				<File
+					RelativePath=".\polarssl\config.h"
+					>
+				</File>
+				<File
+					RelativePath=".\polarssl\rsa.h"
+					>
+				</File>
+				<File
+					RelativePath=".\polarssl\sha2.h"
+					>
+				</File>
+			</Filter>
+			<Filter
+				Name="tinyxml"
+				>
+				<File
+					RelativePath=".\tinyxml\tinystr.h"
+					>
+				</File>
+				<File
+					RelativePath=".\tinyxml\tinyxml.h"
+					>
+				</File>
+			</Filter>
 		</Filter>
 		<Filter
 			Name="Resource Files"
